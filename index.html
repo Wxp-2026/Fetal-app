@@ -1,0 +1,1487 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#F48FB1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="胎动守护">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>胎动守护</title>
+<style>
+html, body {
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+input, textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  /* 主色 */
+  --pink: #F48FB1;           /* 粉色 */
+  --pink-light: #FCE4EC;     /* 浅粉 */
+  --pink-dark: #C2185B;      /* 深粉（重点文字） */
+  --pink-border: #F8BBD0;    /* 粉色边框 */
+
+  --blue: #64B5F6;           /* 蓝色 */
+  --blue-light: #E3F2FD;     /* 浅蓝 */
+  --blue-dark: #1565C0;      /* 深蓝（重点文字） */
+  --blue-border: #BBDEFB;    /* 蓝色边框 */
+
+  /* 中性 */
+  --bg: #FDF2F5;             /* 浅粉背景 */
+  --card: #FFFFFF;           /* 白色卡片 */
+  --text: #212121;           /* 黑色文字 */
+  --text-soft: #616161;      /* 次要文字 */
+  --text-light: #9E9E9E;     /* 说明文字 */
+
+  /* 功能色 */
+  --green: #66BB6A;
+  --green-light: #E8F5E9;
+  --red: #EF5350;
+  --red-light: #FFEBEE;
+  --yellow: #FFB300;
+  --yellow-light: #FFF8E1;
+
+  /* 统一圆角 */
+  --radius: 12px;
+
+  /* 阴影 */
+  --shadow: 0 2px 8px rgba(244,143,177,0.08);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: var(--bg); color: var(--text); min-height: 100vh;
+  display: flex; justify-content: center; align-items: flex-start;
+  line-height: 1.6;
+}
+.app {
+  width: 100%; max-width: 480px; min-height: 100vh; background: var(--bg);
+  display: flex; flex-direction: column; position: relative;
+}
+.header {
+  padding: 18px 16px 16px;
+  background: linear-gradient(135deg, #F8BBD0 0%, #F48FB1 100%);
+  color: white; text-align: center;
+  position: sticky; top: 0; z-index: 10;
+  border-radius: 0 0 var(--radius) var(--radius);
+  box-shadow: 0 4px 16px rgba(244,143,177,0.25);
+}
+.header h1 { font-size: 19px; font-weight: 600; letter-spacing: 0.5px; }
+.header .sub { font-size: 12px; opacity: 0.92; margin-top: 4px; }
+.content { flex: 1; padding: 16px; overflow-y: auto; padding-bottom: 140px; }
+
+/* ============ 底部导航 ============ */
+.nav {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 480px; display: flex;
+  background: #FFFFFF;
+  border-top: 1px solid var(--pink-border); z-index: 100;
+  padding: 6px 0 8px;
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+.nav-item {
+  flex: 1; padding: 4px 2px; text-align: center; cursor: pointer;
+  color: var(--text-light); font-size: 10px;
+  transition: all 0.2s; user-select: none;
+}
+.nav-item.active { color: var(--pink-dark); }
+.nav-item.active .icon { transform: scale(1.15); }
+.nav-item .icon {
+  font-size: 20px; display: block; margin-bottom: 2px;
+  transition: transform 0.2s;
+}
+
+/* ============ Hero 孕周卡（粉边） ============ */
+.hero {
+  background: #FFFFFF;
+  color: var(--text);
+  border-radius: var(--radius);
+  padding: 22px 20px;
+  margin-bottom: 12px;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid var(--pink-border);
+  box-shadow: var(--shadow);
+  transition: all 0.2s;
+}
+.hero::before {
+  content: '🤰';
+  position: absolute; right: -8px; top: -8px;
+  font-size: 90px; opacity: 0.06;
+}
+.hero-week {
+  font-size: 38px; font-weight: 700; line-height: 1.1;
+  letter-spacing: -0.5px;
+  color: var(--pink-dark);
+}
+.hero-week .unit { font-size: 20px; font-weight: 500; }
+.hero-sub {
+  font-size: 13px; color: var(--text-soft); margin-top: 6px;
+}
+.hero-bar {
+  height: 6px; background: var(--pink-light);
+  border-radius: 3px; margin-top: 14px; overflow: hidden;
+}
+.hero-progress {
+  height: 100%; background: linear-gradient(90deg, #F48FB1, #F06292);
+  border-radius: 3px;
+  transition: width 0.6s ease;
+}
+.hero-edit {
+  position: absolute; top: 16px; right: 16px;
+  font-size: 11px; color: var(--pink-dark);
+  background: var(--pink-light);
+  padding: 4px 10px; border-radius: var(--radius);
+}
+
+/* ============ 宝宝状态卡（蓝边） ============ */
+.baby-card {
+  background: #FFFFFF;
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 12px;
+  border: 2px solid var(--blue-border);
+  box-shadow: var(--shadow);
+}
+.baby-card h4 {
+  font-size: 15px; color: var(--blue-dark); margin-bottom: 12px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.baby-card h4 .arrow {
+  font-size: 12px; opacity: 0.6;
+  transition: transform 0.3s;
+}
+.baby-card.collapsed h4 .arrow { transform: rotate(-90deg); }
+.baby-card.collapsed .baby-body { display: none; }
+.baby-row { display: flex; gap: 10px; margin-bottom: 12px; }
+.baby-item {
+  flex: 1; background: var(--blue-light);
+  border-radius: var(--radius); padding: 12px 8px; text-align: center;
+}
+.baby-item .num { font-size: 20px; font-weight: 700; color: var(--blue-dark); }
+.baby-item .lbl { font-size: 11px; color: var(--text-soft); margin-top: 2px; }
+.baby-text {
+  font-size: 13px; color: var(--text); line-height: 1.7;
+  background: #F8FAFE; border-radius: var(--radius); padding: 12px;
+  margin-bottom: 8px;
+  border-left: 3px solid var(--blue-border);
+}
+.baby-text:last-child { margin-bottom: 0; }
+.baby-text strong { color: var(--blue-dark); font-weight: 600; }
+
+/* ============ 快捷入口 ============ */
+.grid-2 {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 12px; margin-bottom: 12px;
+}
+.action-card {
+  background: #FFFFFF;
+  border-radius: var(--radius);
+  padding: 18px 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 2px solid var(--pink-border);
+  box-shadow: var(--shadow);
+}
+.action-card:active { transform: scale(0.97); }
+.action-card.blue { border-color: var(--blue-border); }
+.action-card .icon { font-size: 30px; display: block; margin-bottom: 8px; }
+.action-card .title {
+  font-size: 14px; font-weight: 600; color: var(--pink-dark);
+}
+.action-card.blue .title { color: var(--blue-dark); }
+.action-card .sub {
+  font-size: 11px; color: var(--text-soft); margin-top: 4px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ============ 普通功能卡 ============ */
+.mode-card {
+  background: #FFFFFF;
+  border-radius: var(--radius);
+  padding: 18px 16px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 2px solid var(--pink-border);
+  box-shadow: var(--shadow);
+}
+.mode-card.blue { border-color: var(--blue-border); }
+.mode-card:active { transform: scale(0.98); }
+.mode-card h3 {
+  font-size: 16px; color: var(--pink-dark); margin-bottom: 6px;
+  display: flex; align-items: center; gap: 6px;
+}
+.mode-card.blue h3 { color: var(--blue-dark); }
+.mode-card p { font-size: 13px; color: var(--text-soft); line-height: 1.5; }
+
+/* ============ 按钮 ============ */
+.btn {
+  display: inline-block; padding: 12px 24px;
+  border-radius: var(--radius);
+  border: none; font-size: 15px; cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit; user-select: none; font-weight: 500;
+}
+.btn-primary {
+  background: linear-gradient(135deg, #F8BBD0, #F48FB1);
+  color: white;
+  box-shadow: 0 4px 12px rgba(244,143,177,0.3);
+}
+.btn-primary:active { transform: scale(0.97); }
+.btn-blue {
+  background: linear-gradient(135deg, #90CAF9, #64B5F6);
+  color: white;
+  box-shadow: 0 4px 12px rgba(100,181,246,0.3);
+}
+.btn-outline {
+  background: #FFFFFF; color: var(--pink-dark);
+  border: 1.5px solid var(--pink);
+}
+.btn-outline:active { background: var(--pink-light); }
+.btn-outline-blue {
+  background: #FFFFFF; color: var(--blue-dark);
+  border: 1.5px solid var(--blue);
+}
+.btn-outline-blue:active { background: var(--blue-light); }
+.btn-danger {
+  background: var(--red); color: white;
+  box-shadow: 0 4px 12px rgba(239,83,80,0.25);
+}
+.btn-block { display: block; width: 100%; }
+.btn-row { display: flex; gap: 12px; margin: 16px 0; }
+.btn-row .btn { flex: 1; }
+
+/* ============ 警告横幅 ============ */
+.warning-banner {
+  padding: 12px 16px; border-radius: var(--radius); margin-bottom: 16px;
+  font-size: 14px; font-weight: 500; line-height: 1.5;
+}
+.warning-red { background: var(--red-light); color: #C62828; border-left: 4px solid var(--red); }
+.warning-yellow { background: var(--yellow-light); color: #E65100; border-left: 4px solid var(--yellow); }
+.warning-green { background: var(--green-light); color: #2E7D32; border-left: 4px solid var(--green); }
+
+/* ============ 计数页 ============ */
+.timer {
+  text-align: center; font-size: 34px; font-weight: 700;
+  color: var(--pink-dark); padding: 20px;
+  font-variant-numeric: tabular-nums; letter-spacing: 2px;
+}
+.stats-row {
+  display: flex; justify-content: space-around; padding: 16px 0;
+  background: #FFFFFF; border-radius: var(--radius); margin: 16px 0;
+  border: 2px solid var(--pink-border);
+  box-shadow: var(--shadow);
+}
+.stat-item { text-align: center; }
+.stat-item .value {
+  font-size: 28px; font-weight: 700; color: var(--pink-dark);
+  font-variant-numeric: tabular-nums;
+}
+.stat-item .label { font-size: 12px; color: var(--text-soft); margin-top: 4px; }
+
+/* 大按钮 */
+.big-button {
+  width: 200px; height: 200px; border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #F8BBD0, #F48FB1);
+  color: white; display: flex; flex-direction: column;
+  justify-content: center; align-items: center; margin: 24px auto;
+  cursor: pointer;
+  box-shadow: 0 12px 32px rgba(244,143,177,0.4),
+              inset 0 -4px 12px rgba(0,0,0,0.08);
+  user-select: none; transition: all 0.15s;
+}
+.big-button:active {
+  transform: scale(0.94);
+  box-shadow: 0 6px 16px rgba(244,143,177,0.5),
+              inset 0 -2px 8px rgba(0,0,0,0.1);
+}
+.big-button .tap-icon { font-size: 46px; margin-bottom: 8px; }
+.big-button .label { font-size: 22px; font-weight: 600; }
+
+/* ============ 弹窗 ============ */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(33,33,33,0.45);
+  display: flex; justify-content: center; align-items: center;
+  z-index: 1000; padding: 20px;
+}
+.modal {
+  background: #FFFFFF; border-radius: var(--radius); padding: 24px;
+  max-width: 400px; width: 100%; animation: modalIn 0.25s ease;
+  max-height: 90vh; overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  border: 2px solid var(--pink-border);
+}
+@keyframes modalIn {
+  from { transform: scale(0.92) translateY(10px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+.modal h2 { font-size: 19px; margin-bottom: 12px; color: var(--pink-dark); }
+.modal p { font-size: 15px; line-height: 1.6; color: var(--text-soft); margin-bottom: 20px; }
+.modal-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+.modal-actions .btn { flex: 1; min-width: 100px; }
+
+/* ============ 表单 ============ */
+.form-group { margin-bottom: 16px; }
+.form-group label {
+  display: block; font-size: 13px; color: var(--text);
+  margin-bottom: 6px; font-weight: 500;
+}
+.form-group input, .form-group select {
+  width: 100%; padding: 12px;
+  border: 1.5px solid var(--blue-border);
+  border-radius: var(--radius);
+  font-size: 15px; font-family: inherit;
+  background: #FFFFFF; color: var(--text);
+  transition: border-color 0.2s;
+}
+.form-group input:focus, .form-group select:focus {
+  outline: none; border-color: var(--blue);
+  box-shadow: 0 0 0 3px var(--blue-light);
+}
+.form-hint { font-size: 11px; color: var(--text-light); margin-top: 4px; line-height: 1.5; }
+.form-row { display: flex; gap: 12px; }
+.form-row .form-group { flex: 1; }
+
+/* ============ 历史记录 ============ */
+.history-item {
+  background: #FFFFFF; border-radius: var(--radius); padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow);
+  border: 2px solid var(--pink-border);
+  border-left: 4px solid var(--pink);
+}
+.history-item.blue {
+  border-color: var(--blue-border);
+  border-left: 4px solid var(--blue);
+}
+.history-item.red {
+  border-color: #FFCDD2;
+  border-left: 4px solid var(--red);
+}
+.history-item.yellow {
+  border-color: #FFE082;
+  border-left: 4px solid var(--yellow);
+}
+.history-item .head {
+  display: flex; justify-content: space-between; margin-bottom: 8px;
+  align-items: center;
+}
+.history-item .date { font-size: 13px; color: var(--text-soft); }
+.history-item .status {
+  font-size: 12px; padding: 3px 12px; border-radius: var(--radius);
+  background: var(--pink-light); color: var(--pink-dark); font-weight: 500;
+}
+.history-item.blue .status { background: var(--blue-light); color: var(--blue-dark); }
+.history-item.red .status { background: var(--red-light); color: #C62828; }
+.history-item.yellow .status { background: var(--yellow-light); color: #E65100; }
+.history-item .info { font-size: 14px; color: var(--text); line-height: 1.6; }
+.history-item .info strong { color: var(--pink-dark); }
+.history-item.blue .info strong { color: var(--blue-dark); }
+.history-item .actions-row {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 12px; padding-top: 12px;
+  border-top: 1px solid var(--pink-light);
+}
+.history-item.blue .actions-row { border-top-color: var(--blue-light); }
+.history-item .toggle-btn {
+  font-size: 13px; color: var(--pink-dark); cursor: pointer;
+  user-select: none; padding: 4px 10px; border-radius: var(--radius);
+  background: var(--pink-light);
+}
+.history-item.blue .toggle-btn { color: var(--blue-dark); background: var(--blue-light); }
+.history-item .delete-btn {
+  font-size: 13px; color: var(--red); cursor: pointer; user-select: none;
+  padding: 4px 12px; border-radius: var(--radius); background: var(--red-light);
+}
+.detail-list {
+  margin-top: 12px; padding: 12px; background: var(--pink-light);
+  border-radius: var(--radius); max-height: 300px; overflow-y: auto;
+}
+.detail-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 4px; font-size: 13px;
+  border-bottom: 1px dashed #F8BBD0;
+}
+.detail-item:last-child { border-bottom: none; }
+.detail-item .time { color: var(--text); font-variant-numeric: tabular-nums; }
+.detail-item .tag {
+  font-size: 11px; padding: 3px 10px; border-radius: var(--radius);
+  margin-left: 8px; font-weight: 500;
+}
+.detail-item .tag.effective { background: var(--green-light); color: #2E7D32; }
+.detail-item .tag.merged { background: #ECEFF1; color: #78909C; }
+.detail-item .tag.hiccup { background: var(--blue-light); color: var(--blue-dark); }
+
+/* ============ 空状态 ============ */
+.empty {
+  text-align: center; padding: 60px 20px; color: var(--text-light);
+}
+.empty .icon { font-size: 60px; margin-bottom: 12px; opacity: 0.6; }
+
+/* ============ 筛选 ============ */
+.filter-row {
+  display: flex; gap: 8px; margin-bottom: 16px;
+  overflow-x: auto; padding-bottom: 4px;
+}
+.filter-row::-webkit-scrollbar { display: none; }
+.filter-btn {
+  padding: 7px 16px; border-radius: var(--radius);
+  border: 1.5px solid var(--pink-border); background: #FFFFFF;
+  color: var(--text-soft); font-size: 13px;
+  cursor: pointer; white-space: nowrap;
+  transition: all 0.2s;
+}
+.filter-btn.active {
+  background: linear-gradient(135deg, #F8BBD0, #F48FB1);
+  color: white; border-color: transparent;
+}
+
+/* ============ 统计 ============ */
+.stats-card {
+  background: #FFFFFF; border-radius: var(--radius); padding: 18px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow);
+  border: 2px solid var(--pink-border);
+}
+.stats-card.blue { border-color: var(--blue-border); }
+.stats-card h3 {
+  font-size: 14px; color: var(--text-soft);
+  margin-bottom: 14px; font-weight: 600;
+}
+.stats-card.blue h3 { color: var(--blue-dark); }
+.bar-chart {
+  display: flex; align-items: flex-end; gap: 8px;
+  height: 120px; padding: 8px 0;
+}
+.bar-item {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; height: 100%; justify-content: flex-end;
+}
+.bar {
+  width: 100%;
+  background: linear-gradient(180deg, #F8BBD0 0%, #F48FB1 100%);
+  border-radius: 6px 6px 0 0; min-height: 4px;
+  transition: height 0.4s ease;
+}
+.bar.blue { background: linear-gradient(180deg, #90CAF9 0%, #64B5F6 100%); }
+.bar-label {
+  font-size: 10px; color: var(--text-light); margin-top: 6px;
+  text-align: center; line-height: 1.3;
+}
+
+/* ============ B超 ============ */
+.bpd-record {
+  background: #FFFFFF; border-radius: var(--radius); padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow);
+  border: 2px solid var(--blue-border);
+  border-left: 4px solid var(--blue);
+}
+.bpd-record .head {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 12px;
+}
+.bpd-record .head .date {
+  font-size: 14px; color: var(--blue-dark); font-weight: 600;
+}
+.bpd-record .head .week { font-size: 12px; color: var(--text-soft); }
+.bpd-record .data-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 8px; margin-bottom: 12px;
+}
+.bpd-record .data-item {
+  background: var(--blue-light); border-radius: var(--radius);
+  padding: 10px 6px; text-align: center;
+}
+.bpd-record .data-item .val {
+  font-size: 16px; font-weight: 700; color: var(--blue-dark);
+}
+.bpd-record .data-item .lbl { font-size: 10px; color: var(--text-soft); margin-top: 2px; }
+.bpd-record .efw-row {
+  background: var(--pink-light);
+  border-radius: var(--radius); padding: 12px;
+  text-align: center; margin-bottom: 12px;
+}
+.bpd-record .efw-row .num {
+  font-size: 24px; font-weight: 700; color: var(--pink-dark);
+}
+.bpd-record .efw-row .lbl { font-size: 11px; color: var(--text-soft); }
+.bpd-record .status-box {
+  border-radius: var(--radius); padding: 10px 12px;
+  font-size: 12px; line-height: 1.6; margin-bottom: 10px;
+}
+.status-normal { background: var(--green-light); color: #2E7D32; }
+.status-small { background: var(--yellow-light); color: #E65100; }
+.status-large { background: var(--red-light); color: #C62828; }
+.bpd-record .actions-row {
+  display: flex; justify-content: flex-end; gap: 8px;
+  padding-top: 12px; border-top: 1px solid var(--blue-light);
+}
+.bpd-record .delete-btn {
+  font-size: 13px; color: var(--red); cursor: pointer;
+  padding: 4px 12px; border-radius: var(--radius); background: var(--red-light);
+}
+
+.section-title {
+  font-size: 13px; color: var(--text-soft); margin: 16px 0 12px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+
+/* ============ 提示卡 ============ */
+.tip-card {
+  background: var(--pink-light);
+  border-radius: var(--radius); padding: 16px; margin-top: 16px;
+  font-size: 12px; color: var(--text-soft); line-height: 1.7;
+  border: 1.5px solid var(--pink-border);
+}
+.tip-card strong { color: var(--pink-dark); }
+.tip-card.blue {
+  background: var(--blue-light);
+  border-color: var(--blue-border);
+}
+.tip-card.blue strong { color: var(--blue-dark); }
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<script>
+// ==================== B超参考值 ====================
+const BPD_REF = {
+  28: { bpd: [66.3, 75.1], hc: [248.6, 271.5], ac: [221.2, 252.1], fl: [47.8, 54.8] },
+  32: { bpd: [76.2, 85.7], hc: [282.1, 307.5], ac: [260.2, 298.5], fl: [55.7, 63.5] },
+  36: { bpd: [83.5, 93.7], hc: [305.0, 334.7], ac: [295.4, 342.9], fl: [62.4, 71.2] },
+  40: { bpd: [87.7, 98.6], hc: [315.9, 350.3], ac: [325.2, 383.8], fl: [67.7, 77.4] }
+};
+function getBpdRef(weeks) {
+  const weeksList = [28, 32, 36, 40];
+  if (weeks <= 28) return BPD_REF[28];
+  if (weeks >= 40) return BPD_REF[40];
+  for (let i = 0; i < weeksList.length - 1; i++) {
+    const w1 = weeksList[i], w2 = weeksList[i+1];
+    if (weeks >= w1 && weeks <= w2) {
+      const t = (weeks - w1) / (w2 - w1);
+      const r1 = BPD_REF[w1], r2 = BPD_REF[w2];
+      const lerp = (a, b) => a + (b - a) * t;
+      return {
+        bpd: [lerp(r1.bpd[0], r2.bpd[0]), lerp(r1.bpd[1], r2.bpd[1])],
+        hc: [lerp(r1.hc[0], r2.hc[0]), lerp(r1.hc[1], r2.hc[1])],
+        ac: [lerp(r1.ac[0], r2.ac[0]), lerp(r1.ac[1], r2.ac[1])],
+        fl: [lerp(r1.fl[0], r2.fl[0]), lerp(r1.fl[1], r2.fl[1])]
+      };
+    }
+  }
+  return BPD_REF[28];
+}
+function estimateEFW(bpdCm, acCm, flCm) {
+  if (!acCm || !flCm) return null;
+  const log10EFW = 1.304 + 0.05281 * acCm + 0.1938 * flCm - 0.004 * acCm * flCm;
+  return Math.round(Math.pow(10, log10EFW));
+}
+function getEFWRef(weeks) {
+  if (weeks <= 28) return { low: 1000, high: 1500 };
+  if (weeks >= 40) return { low: 3000, high: 3800 };
+  const t = (weeks - 28) / 12;
+  return { low: Math.round(1000 + (3000 - 1000) * t), high: Math.round(1500 + (3800 - 1500) * t) };
+}
+function assessAmniotic(af) {
+  if (af === null || af === undefined || isNaN(af)) return null;
+  if (af < 2) return { status: 'low', text: '过少' };
+  if (af < 3) return { status: 'low', text: '偏少' };
+  if (af <= 8) return { status: 'normal', text: '正常' };
+  if (af <= 10) return { status: 'high', text: '偏多' };
+  return { status: 'high', text: '过多' };
+}
+function assessFhr(fhr) {
+  if (fhr === null || fhr === undefined || isNaN(fhr)) return null;
+  if (fhr < 110) return { status: 'low', text: '偏慢' };
+  if (fhr <= 160) return { status: 'normal', text: '正常' };
+  return { status: 'high', text: '偏快' };
+}
+function assessBabyStatus(weeks, bpd, hc, ac, fl, efw) {
+  const ref = getBpdRef(weeks);
+  const efwRef = getEFWRef(weeks);
+  const issues = [];
+  const checkParam = (name, val, range) => {
+    if (val === null || val === undefined || isNaN(val)) return;
+    if (val < range[0]) issues.push({ param: name, status: 'small', val, ref: range });
+    else if (val > range[1]) issues.push({ param: name, status: 'large', val, ref: range });
+  };
+  checkParam('双顶径(BPD)', bpd, ref.bpd);
+  checkParam('头围(HC)', hc, ref.hc);
+  checkParam('腹围(AC)', ac, ref.ac);
+  checkParam('股骨长(FL)', fl, ref.fl);
+  if (efw !== null) {
+    if (efw < efwRef.low) issues.push({ param: '估算体重', status: 'small', val: efw, ref: [efwRef.low, efwRef.high] });
+    else if (efw > efwRef.high) issues.push({ param: '估算体重', status: 'large', val: efw, ref: [efwRef.low, efwRef.high] });
+  }
+  let overall = 'normal';
+  if (issues.length > 0) {
+    const hasSmall = issues.some(i => i.status === 'small');
+    const hasLarge = issues.some(i => i.status === 'large');
+    if (hasSmall && !hasLarge) overall = 'small';
+    else if (hasLarge && !hasSmall) overall = 'large';
+    else overall = 'mixed';
+  }
+  return { overall, issues, ref, efwRef };
+}
+
+// ==================== 宝宝状态数据 ====================
+const BABY_INFO = {
+  28: { length: '约 37.5 厘米', weight: '约 1100 克', highlight: '宝宝的眼睛可以睁开了，能感受到光线变化。大脑发育进入快速期，开始有睡眠和清醒的周期。', movement: '胎动有力且规律，是计数胎动的最佳开始时机。' },
+  29: { length: '约 38.5 厘米', weight: '约 1250 克', highlight: '皮下脂肪开始沉积，皮肤不再那么透明。肌肉和肺部继续成熟。', movement: '活动空间还比较充裕，胎动活泼。' },
+  30: { length: '约 40 厘米', weight: '约 1400 克', highlight: '大脑表面开始出现褶皱，能控制体温了。骨髓开始接管红细胞的生成。', movement: '胎动有力，能感觉到宝宝在“拳打脚踢”。' },
+  31: { length: '约 41 厘米', weight: '约 1600 克', highlight: '五官发育进一步完善，能分辨光明和黑暗。肺部和消化系统接近成熟。', movement: '活动仍然频繁，但空间开始变挤。' },
+  32: { length: '约 43 厘米', weight: '约 1800 克', highlight: '5种感觉全部开始工作，能将头从一边转向另一边。肺和胃肠功能接近成熟。', movement: '胎动次数可能比之前减少，动作也减弱，因为子宫空间快被占满了。只要符合规律就没问题。' },
+  33: { length: '约 44 厘米', weight: '约 2000 克', highlight: '呼吸系统和消化系统接近成熟。头骨很软，为分娩做准备。脑神经发达。', movement: '运动感觉更像“摇晃”而非踢踹，因为活动空间更小了。' },
+  34: { length: '约 44 厘米', weight: '约 2300 克', highlight: '已经具备新生儿的外观，皮下脂肪增加。能区分光明和黑暗。', movement: '胎动可能不如之前频繁，但力度仍然很强。' },
+  35: { length: '约 46 厘米', weight: '约 2500 克', highlight: '内脏及性器官发育齐全，已具备呼吸和吸吮能力，听力也充分发育。', movement: '活动空间继续缩小，胎动以蠕动和滚动为主。' },
+  36: { length: '约 47.5 厘米', weight: '约 2800 克', highlight: '肾脏已发育完全，肝脏能处理代谢废物。宝宝通常呈头朝下的姿势。', movement: '胎动模式可能改变，某些时段活动多、某些时段少。' },
+  37: { length: '约 48 厘米', weight: '约 2900 克', highlight: '宝宝已经足月，肺部发育基本成熟。继续积累脂肪。', movement: '入盆后活动空间进一步减小，胎动以局部蠕动为主。' },
+  38: { length: '约 49 厘米', weight: '约 3100 克', highlight: '各器官发育完全，胎毛大部分消退。练习吸吮和吞咽。', movement: '胎动仍然重要，但幅度可能更小。' },
+  39: { length: '约 50 厘米', weight: '约 3300 克', highlight: '继续储存脂肪，皮肤变得光滑。脑部仍在快速发育。', movement: '活动空间极小，胎动以轻微蠕动和伸展为主。' },
+  40: { length: '约 51 厘米', weight: '约 3500 克', highlight: '宝宝已完全成熟，随时准备出生。头骨仍然柔软。', movement: '胎动可能变得更少，但每天仍应保持规律活动。' }
+};
+
+// ==================== 状态 ====================
+const STORAGE_KEY = 'fetal_movement_app_v9';
+let state = {
+  activeView: 'home',
+  currentSession: null,
+  history: [],
+  filter: 'all',
+  expandedIds: {},
+  babyCollapsed: false,
+  profile: { dueDate: null, lmpDate: null, bpdRecords: [] }
+};
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const d = JSON.parse(raw);
+      state.history = d.history || [];
+      state.currentSession = d.currentSession || null;
+      state.profile = d.profile || { dueDate: null, lmpDate: null, bpdRecords: [] };
+      if (!state.profile.bpdRecords) state.profile.bpdRecords = [];
+      if (d.babyCollapsed !== undefined) state.babyCollapsed = d.babyCollapsed;
+    }
+  } catch (e) { console.error(e); }
+}
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      history: state.history,
+      currentSession: state.currentSession,
+      profile: state.profile,
+      babyCollapsed: state.babyCollapsed
+    }));
+  } catch (e) { console.error(e); }
+}
+
+// ==================== 工具 ====================
+const pad = n => String(n).padStart(2, '0');
+function formatTime(ms) {
+  if (ms < 0) ms = 0;
+  const t = Math.floor(ms / 1000);
+  return `${pad(Math.floor(t/3600))}:${pad(Math.floor((t%3600)/60))}:${pad(t%60)}`;
+}
+function formatDate(ts) {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+function formatDateCN(str) {
+  if (!str) return '';
+  const [y, m, d] = str.split('-');
+  return `${y}年${parseInt(m)}月${parseInt(d)}日`;
+}
+function formatDateTime(ts) {
+  const d = new Date(ts);
+  return `${formatDate(ts)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function formatTimeOnly(ts) {
+  const d = new Date(ts);
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+function periodLabel(p) {
+  return { morning: '早间', noon: '午间', evening: '晚间' }[p] || '';
+}
+function recomputeEffectiveCount(events) {
+  let effective = 0, lastEffectiveTime = null;
+  for (const e of events) {
+    if (e.isHiccup) continue;
+    if (lastEffectiveTime === null || e.time - lastEffectiveTime >= 5*60*1000) {
+      effective++; lastEffectiveTime = e.time;
+    }
+  }
+  return { effective, lastEffectiveTime };
+}
+function computeEventTags(events) {
+  let lastEffectiveTime = null;
+  return events.map(e => {
+    if (e.isHiccup) return { ...e, tag: 'hiccup' };
+    if (lastEffectiveTime === null || e.time - lastEffectiveTime >= 5*60*1000) {
+      lastEffectiveTime = e.time;
+      return { ...e, tag: 'effective' };
+    }
+    return { ...e, tag: 'merged' };
+  });
+}
+
+// ==================== 孕周计算 ====================
+function calcPregnancy() {
+  const p = state.profile;
+  let lmp = null;
+  if (p.lmpDate) lmp = new Date(p.lmpDate + 'T00:00:00');
+  else if (p.dueDate) {
+    const due = new Date(p.dueDate + 'T00:00:00');
+    lmp = new Date(due.getTime() - 280 * 86400000);
+  }
+  if (!lmp) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diffDays = Math.floor((today - lmp) / 86400000);
+  if (diffDays < 0) return { error: '日期设置在未来，请检查' };
+  if (diffDays > 300) return { error: '已超过预产期较久，请检查日期' };
+  const weeks = Math.floor(diffDays / 7);
+  const days = diffDays % 7;
+  const dueDate = new Date(lmp.getTime() + 280 * 86400000);
+  const daysToDue = Math.ceil((dueDate - today) / 86400000);
+  let trimester = '孕早期';
+  if (weeks >= 13 && weeks < 28) trimester = '孕中期';
+  else if (weeks >= 28) trimester = '孕晚期';
+  return { weeks, days, diffDays, dueDate, daysToDue, trimester, progress: Math.min(100, (diffDays / 280) * 100) };
+}
+function calcWeeksAtDate(dateStr) {
+  const p = state.profile;
+  let lmp = null;
+  if (p.lmpDate) lmp = new Date(p.lmpDate + 'T00:00:00');
+  else if (p.dueDate) {
+    const due = new Date(p.dueDate + 'T00:00:00');
+    lmp = new Date(due.getTime() - 280 * 86400000);
+  }
+  if (!lmp) return null;
+  const d = new Date(dateStr + 'T00:00:00');
+  const diffDays = Math.floor((d - lmp) / 86400000);
+  if (diffDays < 0 || diffDays > 300) return null;
+  return Math.floor(diffDays / 7);
+}
+function getBabyInfo(weeks) {
+  if (BABY_INFO[weeks]) return BABY_INFO[weeks];
+  if (weeks < 28) return { length: '—', weight: '—', highlight: '胎动计数通常建议从孕28周开始。', movement: '孕中期胎动逐渐明显，但还不需要刻板计数。' };
+  if (weeks > 40) return { length: '约 51 厘米', weight: '约 3500 克以上', highlight: '宝宝已经完全成熟，随时可能出生。', movement: '胎动仍然重要，请继续关注。' };
+  return null;
+}
+
+// ==================== 通用确认弹窗 ====================
+function showConfirmModal(title, message, confirmText, onConfirm, danger) {
+  document.body.insertAdjacentHTML('beforeend',
+    `<div class="modal-overlay" id="confirmModal"><div class="modal">
+      <h2>${title}</h2>
+      <p>${message}</p>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeConfirmModal()">取消</button>
+        <button class="btn ${danger ? 'btn-danger' : 'btn-primary'}" id="confirmBtn">${confirmText}</button>
+      </div>
+    </div></div>`);
+  document.getElementById('confirmBtn').onclick = () => {
+    closeConfirmModal();
+    onConfirm();
+  };
+}
+function closeConfirmModal() {
+  const m = document.getElementById('confirmModal');
+  if (m) m.remove();
+}
+
+// ==================== 路由 ====================
+const app = document.getElementById('app');
+function navigate(v) { state.activeView = v; render(); }
+function render() {
+  const titles = {
+    home: '孕周与宝宝状态',
+    counting: '数胎动',
+    bpd: 'B超记录',
+    history: '历史记录',
+    stats: '数据统计'
+  };
+  let html = `<div class="header">
+    <h1>${titles[state.activeView] || '胎动守护'}</h1>
+    <div class="sub">孕期监测 · 仅供参考</div>
+  </div><div class="content">`;
+  if (state.activeView === 'home') html += renderHome();
+  else if (state.activeView === 'counting') html += renderCountingPage();
+  else if (state.activeView === 'bpd') html += renderBpdPage();
+  else if (state.activeView === 'history') html += renderHistory();
+  else if (state.activeView === 'stats') html += renderStats();
+  html += '</div>';
+  if (!(state.activeView === 'counting' && state.currentSession)) {
+    html += `<div class="nav">
+      <div class="nav-item ${state.activeView==='home'?'active':''}" onclick="navigate('home')"><span class="icon">🏠</span>首页</div>
+      <div class="nav-item ${state.activeView==='counting'?'active':''}" onclick="navigate('counting')"><span class="icon">👶</span>胎动</div>
+      <div class="nav-item ${state.activeView==='bpd'?'active':''}" onclick="navigate('bpd')"><span class="icon">📊</span>B超</div>
+      <div class="nav-item ${state.activeView==='history'?'active':''}" onclick="navigate('history')"><span class="icon">📋</span>历史</div>
+      <div class="nav-item ${state.activeView==='stats'?'active':''}" onclick="navigate('stats')"><span class="icon">📈</span>统计</div>
+    </div>`;
+  }
+  app.innerHTML = html;
+  if (state.activeView === 'counting' && state.currentSession) startTimer(); else stopTimer();
+}
+
+// ==================== 首页 ====================
+function renderHome() {
+  let html = '';
+  const preg = calcPregnancy();
+  if (preg && !preg.error) {
+    html += `<div class="hero" onclick="openPregnancyModal()">
+      <div class="hero-edit">✏️ 修改</div>
+      <div class="hero-week">${preg.weeks}<span class="unit">周</span>${preg.days}<span class="unit">天</span></div>
+      <div class="hero-sub">${preg.trimester} · 距离预产期 ${preg.daysToDue} 天</div>
+      <div class="hero-bar"><div class="hero-progress" style="width:${preg.progress}%"></div></div>
+      <div class="hero-sub" style="margin-top:8px;font-size:11px;">预产期：${formatDate(preg.dueDate.getTime())}</div>
+    </div>`;
+    const baby = getBabyInfo(preg.weeks);
+    if (baby) {
+      const collapsed = state.babyCollapsed ? 'collapsed' : '';
+      html += `<div class="baby-card ${collapsed}">
+        <h4 onclick="toggleBaby()" style="cursor:pointer;">
+          <span>👶 ${preg.weeks}周宝宝状态</span>
+          <span class="arrow">▼</span>
+        </h4>
+        <div class="baby-body">
+          <div class="baby-row">
+            <div class="baby-item"><div class="num">${baby.length.replace(/约\s*/g, '')}</div><div class="lbl">身长</div></div>
+            <div class="baby-item"><div class="num">${baby.weight.replace(/约\s*/g, '')}</div><div class="lbl">体重</div></div>
+          </div>
+          <div class="baby-text"><strong>发育亮点：</strong>${baby.highlight}</div>
+          <div class="baby-text"><strong>胎动特点：</strong>${baby.movement}</div>
+        </div>
+      </div>`;
+    }
+    const records = state.profile.bpdRecords || [];
+    const lastBpd = records.length > 0 ? records.slice().sort((a, b) => b.date.localeCompare(a.date))[0] : null;
+    html += `<div class="grid-2">
+      <div class="action-card blue" onclick="navigate('bpd')">
+        <div class="icon">📊</div>
+        <div class="title">B超记录</div>
+        <div class="sub">${lastBpd ? formatDateCN(lastBpd.date) : '暂无记录'}</div>
+      </div>
+      <div class="action-card" onclick="navigate('counting')">
+        <div class="icon">👶</div>
+        <div class="title">数胎动</div>
+        <div class="sub">${getTodayCountingStatus()}</div>
+      </div>
+    </div>`;
+    if (state.currentSession) {
+      const s = state.currentSession;
+      html += `<div class="mode-card" style="border-left:4px solid var(--yellow);background:var(--yellow-light);" onclick="navigate('counting')">
+        <h3 style="color:#E65100;">⚠️ 有进行中的计数</h3>
+        <p>${periodLabel(s.periodLabel)} · 已进行 ${formatTime(Date.now()-s.startTime)}</p>
+      </div>`;
+    }
+  } else if (preg && preg.error) {
+    html += `<div class="hero" onclick="openPregnancyModal()">
+      <div class="hero-week" style="font-size:22px;">日期有误</div>
+      <div class="hero-sub">${preg.error}</div>
+      <div class="hero-sub" style="margin-top:12px;font-size:11px;color:var(--pink-dark);">点击重新设置 →</div>
+    </div>`;
+  } else {
+    html += `<div class="hero" onclick="openPregnancyModal()">
+      <div class="hero-week" style="font-size:24px;">设置孕周</div>
+      <div class="hero-sub">填写预产期或末次月经，自动计算孕周</div>
+      <div class="hero-sub" style="margin-top:12px;font-size:11px;color:var(--pink-dark);">点击设置 →</div>
+    </div>`;
+  }
+  html += `<div class="tip-card blue">
+    <strong>📌 胎动计数规则</strong><br>
+    · 5分钟内连续动作算1次胎动<br>
+    · 胎儿睡眠周期20-40分钟，安静属正常<br>
+    · 超过90分钟无胎动需警惕<br>
+    · 胎动明显减少、剧烈后消失，立即就医<br>
+    · 胎心正常不能排除胎动减少风险
+  </div>`;
+  return html;
+}
+function getTodayCountingStatus() {
+  const today = formatDate(Date.now());
+  const sessions = state.history.filter(x => formatDate(x.startTime) === today);
+  const count = sessions.length;
+  if (count === 0) return '今日未开始';
+  return `今日已完成 ${count}/3 时段`;
+}
+function toggleBaby() {
+  state.babyCollapsed = !state.babyCollapsed;
+  saveState();
+  render();
+}
+
+// ==================== 数胎动页面 ====================
+function renderCountingPage() {
+  const s = state.currentSession;
+  if (s) return renderCountingActive();
+  const today = formatDate(Date.now());
+  const todaySessions = state.history.filter(x => formatDate(x.startTime) === today);
+  const m = todaySessions.find(x => x.periodLabel === 'morning');
+  const n = todaySessions.find(x => x.periodLabel === 'noon');
+  const e = todaySessions.find(x => x.periodLabel === 'evening');
+  let html = `<div style="font-size:13px;color:var(--text-soft);text-align:center;margin-bottom:16px;line-height:1.6;">
+    早、中、晚各计数1小时<br>三次相加×4，≥30次为正常
+  </div>`;
+  if (m && n && e) {
+    const est = (m.effectiveCount + n.effectiveCount + e.effectiveCount) * 4;
+    let color = 'var(--green)', text = '正常';
+    if (est < 20) { color = 'var(--red)'; text = '异常，请立即就医'; }
+    else if (est < 30) { color = 'var(--yellow)'; text = '需关注，请咨询医生'; }
+    html += `<div class="mode-card" style="text-align:center;border-color:var(--pink-border);">
+      <div style="font-size:12px;color:var(--text-soft);">今日12小时估算值</div>
+      <div style="font-size:40px;font-weight:700;color:${color};font-variant-numeric:tabular-nums;">${est}</div>
+      <div style="font-size:13px;color:${color};">${text}</div>
+    </div>`;
+  }
+  const renderSessionCard = (label, icon, session, period, isBlue) => {
+    if (session) {
+      return `<div class="mode-card" style="border-left:4px solid var(--green);background:var(--green-light);cursor:default;border-color:#C8E6C9;">
+        <h3 style="color:#2E7D32;">${icon} ${label} ✅</h3>
+        <p style="color:#2E7D32;">已完成 · 有效胎动 ${session.effectiveCount} 次</p>
+      </div>`;
+    }
+    return `<div class="mode-card ${isBlue ? 'blue' : ''}" onclick="startSession('B','${period}')">
+      <h3>${icon} ${label}</h3>
+      <p>点击开始 1 小时计数</p>
+    </div>`;
+  };
+  html += renderSessionCard('早间', '🌅', m, 'morning', false);
+  html += renderSessionCard('午间', '☀️', n, 'noon', true);
+  html += renderSessionCard('晚间', '🌙', e, 'evening', false);
+  html += `<div class="tip-card">
+    <strong>📌 计数规则提醒</strong><br>
+    · 5分钟内连续动作算1次胎动<br>
+    · 胎儿睡眠周期20-40分钟，安静属正常<br>
+    · 超过90分钟无胎动需警惕<br>
+    · 胎动明显减少、剧烈后消失，立即就医
+  </div>`;
+  return html;
+}
+function renderCountingActive() {
+  const s = state.currentSession;
+  const target = 3;
+  const reached = s.effectiveCount >= target;
+  let html = '';
+  if (s.warningLevel && s.warningLevel !== 'none') html += `<div class="warning-banner warning-${s.warningLevel}">${s.warningMessage || ''}</div>`;
+  if (reached && (!s.warningLevel || s.warningLevel === 'none')) html += `<div class="warning-banner warning-green">✅ 本时段已达到${target}次，可继续观察或结束</div>`;
+  html += `<div class="timer" id="timer">--:--:--</div>`;
+  html += `<div class="stats-row">
+    <div class="stat-item"><div class="value" id="effCount">${s.effectiveCount}</div><div class="label">有效胎动</div></div>
+    <div class="stat-item"><div class="value" id="rawCount" style="color:var(--text-soft);">${s.rawCount}</div><div class="label">原始点击</div></div>
+    <div class="stat-item"><div class="value" id="hiccupCount" style="color:var(--text-soft);">${s.hiccupCount}</div><div class="label">打嗝</div></div>
+  </div>`;
+  html += `<div class="big-button" onclick="onMovementTap()"><div class="tap-icon">👆</div><div class="label">胎动 +1</div></div>`;
+  html += `<div class="btn-row">
+    <button class="btn btn-outline-blue" onclick="onHiccupTap()">💧 打嗝</button>
+    <button class="btn btn-outline" onclick="onUndoTap()">↩️ 撤销</button>
+  </div>`;
+  html += `<button class="btn btn-primary btn-block" style="margin-top:16px;padding:16px;font-size:16px;" onclick="confirmFinish()">结束计数</button>`;
+  html += `<button class="btn btn-outline btn-block" style="margin-top:8px;margin-bottom:24px;" onclick="abortSession()">放弃本次</button>`;
+  return html;
+}
+
+// ==================== B超页面 ====================
+function renderBpdPage() {
+  const preg = calcPregnancy();
+  const records = (state.profile.bpdRecords || []).slice().sort((a, b) => b.date.localeCompare(a.date));
+  let html = '';
+  html += `<button class="btn btn-blue btn-block" style="margin-bottom:16px;padding:14px;font-size:16px;" onclick="openBpdForm()">➕ 录入新B超数据</button>`;
+  if (!preg || preg.error) {
+    html += `<div class="warning-banner warning-yellow">请先在首页设置孕周，才能进行参考值对比</div>`;
+  }
+  if (records.length === 0) {
+    html += `<div class="empty"><div class="icon">📊</div><div>暂无B超记录</div>
+      <div style="font-size:13px;margin-top:8px;">点击上方按钮录入第一条记录</div></div>`;
+    return html;
+  }
+  html += `<div class="section-title">
+    <span>共 ${records.length} 条记录</span>
+    <span style="font-size:13px;color:var(--red);cursor:pointer;" onclick="clearAllBpd()">🗑️ 清空全部</span>
+  </div>`;
+  for (const r of records) html += renderBpdRecord(r, preg);
+  return html;
+}
+function renderBpdRecord(r, preg) {
+  const refWeeks = r.weeks || (preg && !preg.error ? preg.weeks : null);
+  const assess = refWeeks ? assessBabyStatus(refWeeks, r.bpd, r.hc, r.ac, r.fl, r.efw) : null;
+  const statusText = !assess ? '未评估' :
+    assess.overall === 'normal' ? '发育正常' :
+    assess.overall === 'small' ? '偏小，需关注' :
+    assess.overall === 'large' ? '偏大，需关注' : '部分指标异常';
+  const statusClass = !assess ? '' :
+    assess.overall === 'normal' ? 'status-normal' :
+    assess.overall === 'small' ? 'status-small' : 'status-large';
+  const afAssess = assessAmniotic(r.af);
+  const fhrAssess = assessFhr(r.fhr);
+  let html = `<div class="bpd-record">
+    <div class="head">
+      <div>
+        <div class="date">📅 ${formatDateCN(r.date)}</div>
+        <div class="week">${r.weeks ? `检查时孕 ${r.weeks} 周` : '未记录孕周'}</div>
+      </div>
+    </div>
+    <div class="data-grid">
+      ${r.bpd ? `<div class="data-item"><div class="val">${r.bpd}</div><div class="lbl">双顶径 BPD(mm)</div></div>` : ''}
+      ${r.hc ? `<div class="data-item"><div class="val">${r.hc}</div><div class="lbl">头围 HC(mm)</div></div>` : ''}
+      ${r.fl ? `<div class="data-item"><div class="val">${r.fl}</div><div class="lbl">股骨长 FL(mm)</div></div>` : ''}
+      ${r.ac ? `<div class="data-item"><div class="val">${r.ac}</div><div class="lbl">腹围 AC(mm)</div></div>` : ''}
+      ${r.fhr ? `<div class="data-item"><div class="val">${r.fhr}</div><div class="lbl">胎心(次/分)</div></div>` : ''}
+      ${r.af ? `<div class="data-item"><div class="val">${r.af}</div><div class="lbl">羊水深度(cm)</div></div>` : ''}
+    </div>
+    ${r.efw ? `<div class="efw-row"><div class="num">${r.efw} g</div><div class="lbl">估算胎儿体重</div></div>` : ''}
+    ${afAssess ? `<div class="status-box ${afAssess.status==='normal'?'status-normal':afAssess.status==='low'?'status-small':'status-large'}" style="margin-bottom:8px;">
+      <strong>羊水深度：</strong>${r.af} cm · ${afAssess.text}（参考 3-8 cm 正常）
+    </div>` : ''}
+    ${fhrAssess ? `<div class="status-box ${fhrAssess.status==='normal'?'status-normal':fhrAssess.status==='low'?'status-small':'status-large'}" style="margin-bottom:8px;">
+      <strong>胎心：</strong>${r.fhr} 次/分 · ${fhrAssess.text}（参考 110-160 次/分 正常）
+    </div>` : ''}
+    ${assess ? `<div class="status-box ${statusClass}">
+      <strong>综合评估：${statusText}</strong><br>
+      ${assess.issues.length > 0 ? assess.issues.map(i => `· ${i.param} ${i.status === 'small' ? '偏小' : '偏大'}`).join('<br>') : '各项参数均在正常范围内'}
+    </div>` : ''}
+    <div class="actions-row">
+      <span class="delete-btn" onclick="deleteBpdRecord('${r.date}')">🗑️ 删除</span>
+    </div>
+  </div>`;
+  return html;
+}
+function openBpdForm() {
+  const today = formatDate(Date.now());
+  document.body.insertAdjacentHTML('beforeend',
+    `<div class="modal-overlay" id="bpdModal"><div class="modal">
+      <h2>录入B超数据</h2>
+      <p style="font-size:13px;color:var(--text-soft);">输入B超单上的数值</p>
+      <div class="form-group">
+        <label>B超检查日期 *</label>
+        <input type="date" id="inputDate" value="${today}">
+        <div class="form-hint">用于计算检查时的孕周</div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>双顶径 BPD (mm)</label><input type="number" id="inputBpd" placeholder="如 80"></div>
+        <div class="form-group"><label>头围 HC (mm)</label><input type="number" id="inputHc" placeholder="如 290"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>股骨长 FL (mm)</label><input type="number" id="inputFl" placeholder="如 60"></div>
+        <div class="form-group"><label>腹围 AC (mm)</label><input type="number" id="inputAc" placeholder="如 270"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>胎心 (次/分)</label><input type="number" id="inputFhr" placeholder="如 145"></div>
+        <div class="form-group"><label>羊水深度 (cm)</label><input type="number" step="0.1" id="inputAf" placeholder="如 4.5"></div>
+      </div>
+      <div class="form-hint" style="margin-bottom:12px;">只需填写B超单上有的项目，留空则不参与评估</div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeBpdModal()">取消</button>
+        <button class="btn btn-blue" onclick="saveBpdRecord()">保存</button>
+      </div>
+    </div></div>`);
+}
+function saveBpdRecord() {
+  const date = document.getElementById('inputDate').value;
+  if (!date) { alert('请选择B超检查日期'); return; }
+  const bpd = parseFloat(document.getElementById('inputBpd').value) || null;
+  const hc = parseFloat(document.getElementById('inputHc').value) || null;
+  const fl = parseFloat(document.getElementById('inputFl').value) || null;
+  const ac = parseFloat(document.getElementById('inputAc').value) || null;
+  const fhr = parseFloat(document.getElementById('inputFhr').value) || null;
+  const af = parseFloat(document.getElementById('inputAf').value) || null;
+  if (!bpd && !hc && !fl && !ac && !fhr && !af) { alert('请至少填写一项数据'); return; }
+  const weeks = calcWeeksAtDate(date);
+  let efw = null;
+  if (ac && fl) efw = estimateEFW(bpd || 0, ac / 10, fl / 10);
+  const existing = state.profile.bpdRecords.findIndex(r => r.date === date);
+  const record = { date, weeks, bpd, hc, fl, ac, fhr, af, efw };
+  if (existing >= 0) state.profile.bpdRecords[existing] = record;
+  else state.profile.bpdRecords.push(record);
+  saveState();
+  closeBpdModal();
+  render();
+  showBpdResult(record, weeks);
+}
+function showBpdResult(r, weeks) {
+  const assess = weeks ? assessBabyStatus(weeks, r.bpd, r.hc, r.ac, r.fl, r.efw) : null;
+  const afAssess = assessAmniotic(r.af);
+  const fhrAssess = assessFhr(r.fhr);
+  const statusText = !assess ? '未评估（缺少孕周信息）' :
+    assess.overall === 'normal' ? '发育正常' :
+    assess.overall === 'small' ? '偏小，需关注' :
+    assess.overall === 'large' ? '偏大，需关注' : '部分指标异常';
+  const statusClass = !assess ? '' :
+    assess.overall === 'normal' ? 'status-normal' :
+    assess.overall === 'small' ? 'status-small' : 'status-large';
+  let issuesHtml = '';
+  if (assess && assess.issues.length > 0) {
+    issuesHtml = assess.issues.map(i => `· ${i.param} ${i.status === 'small' ? '偏小' : '偏大'}（${i.val}${i.param.includes('体重') ? 'g' : 'mm'}，参考 ${Math.round(i.ref[0])}-${Math.round(i.ref[1])}${i.param.includes('体重') ? 'g' : 'mm'}）`).join('<br>');
+  } else if (assess) issuesHtml = '各项参数均在正常范围内';
+  document.body.insertAdjacentHTML('beforeend',
+    `<div class="modal-overlay" id="resultModal"><div class="modal">
+      <h2>📊 评估结果</h2>
+      ${r.efw ? `<div class="efw-row" style="margin-bottom:16px;"><div class="num" style="font-size:32px;">${r.efw} g</div><div class="lbl">估算胎儿体重</div></div>` : ''}
+      ${assess ? `<div class="status-box ${statusClass}" style="margin-bottom:12px;"><strong>${statusText}</strong><br>${issuesHtml}</div>` : ''}
+      ${afAssess ? `<div class="status-box ${afAssess.status==='normal'?'status-normal':afAssess.status==='low'?'status-small':'status-large'}" style="margin-bottom:8px;"><strong>羊水深度：</strong>${r.af} cm · ${afAssess.text}</div>` : ''}
+      ${fhrAssess ? `<div class="status-box ${fhrAssess.status==='normal'?'status-normal':fhrAssess.status==='low'?'status-small':'status-large'}" style="margin-bottom:12px;"><strong>胎心：</strong>${r.fhr} 次/分 · ${fhrAssess.text}</div>` : ''}
+      <div style="font-size:12px;color:var(--text-light);line-height:1.6;background:var(--pink-light);padding:12px;border-radius:var(--radius);">
+        ⚠️ 本评估基于孕周参考值范围，仅供参考。具体以产检医生判断为准。
+      </div>
+      <button class="btn btn-blue btn-block" style="margin-top:16px;" onclick="closeModal()">完成</button>
+    </div></div>`);
+}
+function deleteBpdRecord(date) {
+  showConfirmModal('删除这条B超记录？', '删除后不可恢复。', '删除', () => {
+    state.profile.bpdRecords = state.profile.bpdRecords.filter(r => r.date !== date);
+    saveState();
+    render();
+  }, true);
+}
+function clearAllBpd() {
+  if (state.profile.bpdRecords.length === 0) { alert('暂无记录'); return; }
+  showConfirmModal('清空全部B超记录？', `共 ${state.profile.bpdRecords.length} 条记录，清空后不可恢复。`, '继续', () => {
+    showConfirmModal('再次确认', '清空后所有B超记录将永久丢失，确定继续？', '确定清空', () => {
+      state.profile.bpdRecords = [];
+      saveState();
+      render();
+    }, true);
+  }, true);
+}
+function closeBpdModal() { const m = document.getElementById('bpdModal'); if (m) m.remove(); }
+function closeModal() { const m = document.getElementById('resultModal'); if (m) m.remove(); }
+
+// ==================== 孕周设置弹窗 ====================
+function openPregnancyModal() {
+  const p = state.profile;
+  document.body.insertAdjacentHTML('beforeend',
+    `<div class="modal-overlay" id="pregModal"><div class="modal">
+      <h2>设置孕周</h2>
+      <p style="font-size:13px;color:var(--text-soft);">任选一种方式填写，系统自动计算孕周</p>
+      <div class="form-group"><label>方式一：预产期</label><input type="date" id="inputDueDate" value="${p.dueDate || ''}"><div class="form-hint">医生告知的预产期</div></div>
+      <div class="form-group"><label>方式二：末次月经第一天</label><input type="date" id="inputLmpDate" value="${p.lmpDate || ''}"><div class="form-hint">预产期 = 该日期 + 280天</div></div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="clearPregnancy()">清除</button>
+        <button class="btn btn-primary" onclick="savePregnancy()">保存</button>
+      </div>
+      <button class="btn btn-outline btn-block" style="margin-top:12px;" onclick="closePregModal()">取消</button>
+    </div></div>`);
+}
+function savePregnancy() {
+  const due = document.getElementById('inputDueDate').value;
+  const lmp = document.getElementById('inputLmpDate').value;
+  if (!due && !lmp) { alert('请至少填写一项'); return; }
+  state.profile.dueDate = due || null;
+  state.profile.lmpDate = lmp || null;
+  saveState();
+  closePregModal();
+  render();
+}
+function clearPregnancy() {
+  showConfirmModal('清除孕周信息？', '清除后需要重新设置。', '清除', () => {
+    state.profile.dueDate = null;
+    state.profile.lmpDate = null;
+    saveState();
+    closePregModal();
+    render();
+  }, true);
+}
+function closePregModal() { const m = document.getElementById('pregModal'); if (m) m.remove(); }
+
+// ==================== 历史页 ====================
+function renderHistory() {
+  const list = state.history.slice().reverse();
+  if (list.length === 0) {
+    return `<div class="empty"><div class="icon">📋</div><div>暂无历史记录</div><div style="font-size:13px;margin-top:8px;">完成一次计数后，记录会显示在这里</div></div>`;
+  }
+  let html = `<div class="filter-row">
+    <div class="filter-btn ${state.filter==='all'?'active':''}" onclick="setFilter('all')">全部</div>
+    <div class="filter-btn ${state.filter==='morning'?'active':''}" onclick="setFilter('morning')">早间</div>
+    <div class="filter-btn ${state.filter==='noon'?'active':''}" onclick="setFilter('noon')">午间</div>
+    <div class="filter-btn ${state.filter==='evening'?'active':''}" onclick="setFilter('evening')">晚间</div>
+    <div class="filter-btn ${state.filter==='red'?'active':''}" onclick="setFilter('red')">异常</div>
+  </div>`;
+  html += `<div style="display:flex;justify-content:flex-end;margin-bottom:12px;"><button class="btn btn-danger" style="padding:6px 16px;font-size:13px;" onclick="clearAllHistory()">🗑️ 清空全部</button></div>`;
+  let filtered = list;
+  if (['morning', 'noon', 'evening'].includes(state.filter)) filtered = list.filter(s => s.periodLabel === state.filter);
+  else if (state.filter === 'red') filtered = list.filter(s => s.warningLevel === 'red');
+  if (filtered.length === 0) return html + '<div class="empty"><div class="icon">🔍</div><div>没有符合条件的记录</div></div>';
+  for (const s of filtered) {
+    const cls = s.warningLevel === 'red' ? 'red' : s.warningLevel === 'yellow' ? 'yellow' : '';
+    const statusText = s.warningLevel === 'red' ? '异常' : s.warningLevel === 'yellow' ? '关注' : '正常';
+    const modeText = `12小时法·${periodLabel(s.periodLabel)}`;
+    const expanded = !!state.expandedIds[s.id];
+    const events = s.events || [];
+    const taggedEvents = computeEventTags(events);
+    html += `<div class="history-item ${cls}">
+      <div class="head"><span class="date">${formatDateTime(s.startTime)}</span><span class="status">${statusText}</span></div>
+      <div class="info"><strong>${modeText}</strong> · 有效 ${s.effectiveCount} 次${s.rawCount !== s.effectiveCount ? `（原始点击 ${s.rawCount}）` : ''}${s.hiccupCount > 0 ? ` · 打嗝 ${s.hiccupCount}` : ''}</div>
+      <div class="actions-row">
+        <span class="toggle-btn" onclick="toggleDetail('${s.id}')">${expanded ? '▲ 收起详情' : `▼ 查看详情（${events.length}次点击）`}</span>
+        <span class="delete-btn" onclick="deleteHistory('${s.id}')">🗑️ 删除</span>
+      </div>`;
+    if (expanded) {
+      if (events.length === 0) html += `<div class="detail-list"><div style="text-align:center;color:var(--text-light);font-size:13px;padding:12px;">本次没有记录到点击</div></div>`;
+      else {
+        html += `<div class="detail-list">`;
+        taggedEvents.forEach((e, idx) => {
+          let tagText = '有效', tagCls = 'effective';
+          if (e.tag === 'merged') { tagText = '合并'; tagCls = 'merged'; }
+          else if (e.tag === 'hiccup') { tagText = '打嗝'; tagCls = 'hiccup'; }
+          html += `<div class="detail-item"><span class="time">${idx+1}. ${formatTimeOnly(e.time)}</span><span class="tag ${tagCls}">${tagText}</span></div>`;
+        });
+        html += `</div>`;
+      }
+    }
+    html += `</div>`;
+  }
+  return html;
+}
+function setFilter(f) { state.filter = f; render(); }
+function toggleDetail(id) { state.expandedIds[id] = !state.expandedIds[id]; render(); }
+function deleteHistory(id) {
+  showConfirmModal('删除这条记录？', '删除后不可恢复。', '删除', () => {
+    state.history = state.history.filter(s => s.id !== id);
+    delete state.expandedIds[id];
+    saveState();
+    render();
+  }, true);
+}
+function clearAllHistory() {
+  if (state.history.length === 0) { alert('暂无记录可清空'); return; }
+  showConfirmModal('清空全部记录？', `共 ${state.history.length} 条记录，清空后不可恢复。`, '继续', () => {
+    showConfirmModal('再次确认', '清空后所有历史记录将永久丢失，确定继续？', '确定清空', () => {
+      state.history = [];
+      state.expandedIds = {};
+      saveState();
+      render();
+    }, true);
+  }, true);
+}
+
+// ==================== 统计页 ====================
+function renderStats() {
+  const all = state.history;
+  if (all.length === 0) {
+    return `<div class="empty"><div class="icon">📈</div><div>暂无数据</div><div style="font-size:13px;margin-top:8px;">完成几次计数后，这里会显示趋势</div></div>`;
+  }
+  const total = all.length;
+  const redCount = all.filter(s => s.warningLevel === 'red').length;
+  const yellowCount = all.filter(s => s.warningLevel === 'yellow').length;
+  const normalCount = total - redCount - yellowCount;
+  const last7 = [];
+  for (let i = 6; i >= 0; i--) {
+    const ds = new Date(); ds.setHours(0,0,0,0); ds.setDate(ds.getDate() - i);
+    const de = ds.getTime() + 86400000;
+    const daySessions = all.filter(s => s.startTime >= ds.getTime() && s.startTime < de);
+    const m = daySessions.find(s => s.periodLabel === 'morning');
+    const n = daySessions.find(s => s.periodLabel === 'noon');
+    const e = daySessions.find(s => s.periodLabel === 'evening');
+    let est = null;
+    if (m && n && e) est = (m.effectiveCount + n.effectiveCount + e.effectiveCount) * 4;
+    last7.push({ date: ds, est });
+  }
+  const maxEst = Math.max(...last7.map(d => d.est || 0), 40);
+  let html = `<div class="stats-card"><h3>📈 总览</h3>
+    <div class="stats-row" style="margin:0;box-shadow:none;border:none;background:transparent;padding:0;">
+      <div class="stat-item"><div class="value">${total}</div><div class="label">总次数</div></div>
+      <div class="stat-item"><div class="value" style="color:var(--green);">${normalCount}</div><div class="label">正常</div></div>
+      <div class="stat-item"><div class="value" style="color:var(--yellow);">${yellowCount}</div><div class="label">关注</div></div>
+      <div class="stat-item"><div class="value" style="color:var(--red);">${redCount}</div><div class="label">异常</div></div>
+    </div></div>`;
+  html += `<div class="stats-card blue"><h3>📊 近7天12小时估算值</h3><div class="bar-chart">`;
+  for (const d of last7) {
+    const h = d.est ? Math.max(8, (d.est / maxEst) * 100) : 4;
+    let bgCls = '';
+    let bg = '';
+    if (d.est !== null && d.est < 20) bg = 'linear-gradient(180deg, #EF9A9A 0%, #EF5350 100%)';
+    else if (d.est !== null && d.est < 30) bg = 'linear-gradient(180deg, #FFE082 0%, #FFB300 100%)';
+    else bgCls = 'blue';
+    html += `<div class="bar-item"><div class="bar ${bgCls}" style="height:${h}%;${bg ? 'background:' + bg + ';' : ''}opacity:${d.est?1:0.2};"></div><div class="bar-label">${d.date.getMonth()+1}/${d.date.getDate()}${d.est?`<br>${d.est}`:''}</div></div>`;
+  }
+  html += `</div><div style="font-size:12px;color:var(--text-light);margin-top:8px;text-align:center;">≥30 正常 · 20-29 关注 · &lt;20 异常</div></div>`;
+  const today = formatDate(Date.now());
+  const todayB = all.filter(s => formatDate(s.startTime) === today);
+  const m = todayB.find(s => s.periodLabel === 'morning');
+  const n = todayB.find(s => s.periodLabel === 'noon');
+  const e = todayB.find(s => s.periodLabel === 'evening');
+  if (m || n || e) {
+    html += `<div class="stats-card"><h3>🕐 今日12小时法</h3>
+      <div style="display:flex;justify-content:space-around;text-align:center;">
+        <div><div style="font-size:22px;font-weight:700;color:${m?'var(--pink-dark)':'#ccc'};">${m?m.effectiveCount:'-'}</div><div style="font-size:12px;color:var(--text-light);">早间</div></div>
+        <div><div style="font-size:22px;font-weight:700;color:${n?'var(--blue-dark)':'#ccc'};">${n?n.effectiveCount:'-'}</div><div style="font-size:12px;color:var(--text-light);">午间</div></div>
+        <div><div style="font-size:22px;font-weight:700;color:${e?'var(--pink-dark)':'#ccc'};">${e?e.effectiveCount:'-'}</div><div style="font-size:12px;color:var(--text-light);">晚间</div></div>
+      </div>`;
+    if (m && n && e) {
+      const est = (m.effectiveCount + n.effectiveCount + e.effectiveCount) * 4;
+      let color = 'var(--green)', text = '正常';
+      if (est < 20) { color = 'var(--red)'; text = '异常，请立即就医'; }
+      else if (est < 30) { color = 'var(--yellow)'; text = '需关注，请咨询医生'; }
+      html += `<div style="margin-top:16px;padding:12px;background:var(--pink-light);border-radius:var(--radius);text-align:center;">
+        <div style="font-size:12px;color:var(--text-soft);">12小时估算值</div>
+        <div style="font-size:28px;font-weight:700;color:${color};font-variant-numeric:tabular-nums;">${est}</div>
+        <div style="font-size:13px;color:${color};">${text}</div></div>`;
+    }
+    html += `</div>`;
+  }
+  return html;
+}
+
+// ==================== 会话操作 ====================
+function startSession(mode, periodLabel) {
+  if (state.currentSession) {
+    showConfirmModal('已有进行中的计数', '是否放弃并开始新的？', '确定', () => {
+      doStartSession(mode, periodLabel);
+    });
+    return;
+  }
+  doStartSession(mode, periodLabel);
+}
+function doStartSession(mode, periodLabel) {
+  const now = Date.now();
+  state.currentSession = {
+    id: 's_' + now, mode, periodLabel: periodLabel || null,
+    startTime: now, plannedEndTime: now + 60 * 60 * 1000,
+    plannedDurationMin: 60,
+    effectiveCount: 0, rawCount: 0, hiccupCount: 0, events: [],
+    lastEffectiveTime: null, lastAnyMovementTime: null,
+    warningLevel: 'none', warningMessage: null,
+    silenceWarned: false, reachTargetWarned: false, status: 'active'
+  };
+  saveState();
+  navigate('counting');
+}
+function onMovementTap() {
+  const s = state.currentSession;
+  if (!s) return;
+  if (navigator.vibrate) navigator.vibrate(30);
+  const now = Date.now();
+  s.events.push({ time: now, isHiccup: false });
+  const { effective, lastEffectiveTime } = recomputeEffectiveCount(s.events);
+  s.effectiveCount = effective; s.lastEffectiveTime = lastEffectiveTime; s.lastAnyMovementTime = now;
+  s.rawCount = s.events.filter(e => !e.isHiccup).length;
+  s.hiccupCount = s.events.filter(e => e.isHiccup).length;
+  if (s.warningLevel === 'red' && s.warningMessage && s.warningMessage.includes('90分钟')) { s.warningLevel = 'none'; s.warningMessage = null; s.silenceWarned = false; }
+  if (s.effectiveCount === 3 && !s.reachTargetWarned) { s.reachTargetWarned = true; saveState(); render(); }
+  else { saveState(); updateCountingDisplay(); }
+}
+function onHiccupTap() {
+  const s = state.currentSession;
+  if (!s) return;
+  if (navigator.vibrate) navigator.vibrate(20);
+  s.events.push({ time: Date.now(), isHiccup: true });
+  s.hiccupCount++; s.lastAnyMovementTime = Date.now();
+  saveState(); updateCountingDisplay();
+}
+function onUndoTap() {
+  const s = state.currentSession;
+  if (!s || s.events.length === 0) return;
+  showConfirmModal('撤销最后一次记录？', '撤销后该次点击将被删除。', '撤销', () => {
+    s.events.pop();
+    const { effective, lastEffectiveTime } = recomputeEffectiveCount(s.events);
+    s.effectiveCount = effective; s.lastEffectiveTime = lastEffectiveTime;
+    s.rawCount = s.events.filter(e => !e.isHiccup).length;
+    s.hiccupCount = s.events.filter(e => e.isHiccup).length;
+    s.lastAnyMovementTime = s.events.length > 0 ? s.events[s.events.length-1].time : null;
+    saveState(); render();
+  });
+}
+function updateCountingDisplay() {
+  const s = state.currentSession;
+  if (!s) return;
+  const e = document.getElementById('effCount'); const r = document.getElementById('rawCount'); const h = document.getElementById('hiccupCount');
+  if (e) e.textContent = s.effectiveCount;
+  if (r) r.textContent = s.rawCount;
+  if (h) h.textContent = s.hiccupCount;
+}
+function confirmFinish() {
+  const s = state.currentSession;
+  if (!s) return;
+  if (s.effectiveCount < 3) {
+    showConfirmModal('结束计数？', `当前有效胎动 ${s.effectiveCount} 次，少于 3 次标准。确定结束吗？`, '确定结束', () => finishSession());
+  } else {
+    finishSession();
+  }
+}
+function finishSession() {
+  const s = state.currentSession;
+  if (!s) return;
+  const now = Date.now();
+  s.endTime = now; s.status = 'completed'; s.durationMin = Math.round((now - s.startTime) / 60000);
+  let level = 'none', message = '';
+  if (s.effectiveCount < 3) { level = 'yellow'; message = `本时段1小时内有效胎动仅 ${s.effectiveCount} 次，少于3次，请结合整体情况咨询医生。`; }
+  else { message = `本时段有效胎动 ${s.effectiveCount} 次。请完成早中晚三次后查看12小时估算值。`; }
+  s.warningLevel = level; s.warningMessage = message;
+  state.history.push({ ...s });
+  state.currentSession = null; state.activeView = 'counting';
+  saveState(); render();
+  showResultModal(level, message);
+}
+function abortSession() {
+  showConfirmModal('放弃本次计数？', '放弃后本次记录将不会保存。', '确定放弃', () => {
+    state.currentSession = null;
+    saveState();
+    navigate('counting');
+  }, true);
+}
+function showResultModal(level, message) {
+  const c = { red: { color: 'var(--red)', icon: '⚠️', title: '胎动异常' }, yellow: { color: '#E65100', icon: '⚠️', title: '需要关注' }, none: { color: 'var(--green)', icon: '✅', title: '计数完成' } }[level] || { color: 'var(--green)', icon: '✅', title: '计数完成' };
+  let actions = '';
+  if (level === 'red') actions = `<button class="btn btn-danger" onclick="alert('请立即拨打您的产检医生电话，或直接前往医院。\\n紧急情况请拨打 120。')">拨打医生</button><button class="btn btn-primary" onclick="closeModal()">我知道了</button>`;
+  else actions = `<button class="btn btn-primary" onclick="closeModal()">完成</button>`;
+  document.body.insertAdjacentHTML('beforeend',
+    `<div class="modal-overlay" id="resultModal"><div class="modal">
+      <h2 style="color:${c.color};">${c.icon} ${c.title}</h2>
+      <p>${message}</p>
+      <div class="modal-actions">${actions}</div>
+    </div></div>`);
+}
+
+// ==================== 计时器 ====================
+let timerInterval = null;
+function startTimer() { stopTimer(); timerInterval = setInterval(tick, 1000); tick(); }
+function stopTimer() { if (timerInterval) { clearInterval(timerInterval); timerInterval = null; } }
+function tick() {
+  const s = state.currentSession;
+  if (!s) return;
+  const remaining = s.plannedEndTime - Date.now();
+  const el = document.getElementById('timer');
+  if (el) { el.textContent = formatTime(remaining); el.style.color = (remaining <= 5*60*1000 && remaining > 0) ? 'var(--red)' : 'var(--pink-dark)'; }
+  if (remaining <= 0) { stopTimer(); finishSession(); return; }
+  if (s.lastAnyMovementTime && !s.silenceWarned) {
+    const silence = Date.now() - s.lastAnyMovementTime;
+    if (silence > 90*60*1000) {
+      s.silenceWarned = true; s.warningLevel = 'red';
+      s.warningMessage = '超过90分钟无胎动，请左侧卧、喝水、轻推腹部；若仍无胎动，立即就医。';
+      saveState(); render(); showResultModal('red', s.warningMessage);
+    }
+  }
+}
+
+// ==================== 启动 ====================
+loadState();
+if (location.hash) { const v = location.hash.slice(1); if (['home', 'counting', 'bpd', 'history', 'stats'].includes(v)) state.activeView = v; }
+render();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('SW 注册成功:', reg.scope))
+      .catch(err => console.error('SW 注册失败:', err));
+  });
+}
+</script>
+</body>
+</html>
