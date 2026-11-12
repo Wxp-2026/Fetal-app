@@ -1,1487 +1,1814 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#F48FB1">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>日迹 · 打卡</title>
+
+<!-- ================= PWA 相关 ================= -->
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#C7BCA6">
+<meta name="description" content="记录每天的心情、体重与日常打卡">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="胎动守护">
-<meta name="mobile-web-app-capable" content="yes">
-<link rel="manifest" href="./manifest.json">
+<meta name="apple-mobile-web-app-title" content="日迹">
 <link rel="apple-touch-icon" href="./icon-192.png">
-<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
-<link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<title>胎动守护</title>
+<link rel="icon" type="image/svg+xml" href="./icon.svg">
+<!-- ============================================ -->
+
+<!-- lunar-javascript：农历转换、节气、节日 -->
+<script src="https://cdn.jsdelivr.net/npm/lunar-javascript@2.0.4/dist/lunar.min.js"></script>
 <style>
-html, body {
-  overscroll-behavior: none;
-  -webkit-user-select: none;
-  user-select: none;
+:root{
+  --paper:#FDFBF6;
+  --paper-line:#EFE9DC;
+  --ink:#33302B;
+  --ink2:#6E685D;
+  --ink3:#A29A8B;
+  --line:#E6E0D2;
+  --accent:#C96B4A;
+  --accent-soft:#F9ECE5;
+  --up:#C0554B;
+  --down:#4C8B7A;
+  --festival:#C0554B;
+  --term:#4C8B7A;
+  --font-serif:"Songti SC","STSong","Noto Serif CJK SC","Source Han Serif SC","SimSun",Georgia,serif;
 }
-input, textarea {
-  -webkit-user-select: text;
-  user-select: text;
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;}
+body{
+  background-color:#C7BCA6;
+  background-image:
+    radial-gradient(circle at 50% 0%, rgba(255,255,255,.20), transparent 55%),
+    repeating-linear-gradient(45deg, rgba(255,255,255,.03) 0 2px, transparent 2px 4px);
+  color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Noto Sans SC","Microsoft YaHei",sans-serif;
+  -webkit-font-smoothing:antialiased;
+  overscroll-behavior-y:contain;
 }
-* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+#app{
+  max-width:430px;
+  margin:0 auto;
+  min-height:100vh;
+  min-height:100dvh;
+  position:relative;
+  overflow-x:hidden;
+  padding-bottom:calc(48px + env(safe-area-inset-bottom));
+  background-color:var(--paper);
+  background-image:repeating-linear-gradient(180deg,transparent 0,transparent 27px,var(--paper-line) 27px,var(--paper-line) 28px);
+  box-shadow:0 0 60px rgba(0,0,0,.13);
+}
+#app::before{
+  content:'';
+  position:absolute;
+  left:8px;top:0;bottom:0;
+  width:1.5px;
+  background:#E7B1B1;
+  opacity:.55;
+  z-index:0;
+  pointer-events:none;
+}
+.page{
+  padding:0 16px 0 22px;
+  position:relative;
+  z-index:1;
+  padding-top:env(safe-area-inset-top);
+}
+button{font-family:inherit;border:none;background:none;padding:0;cursor:pointer;color:inherit;}
+input,textarea{font-family:inherit;}
 
-:root {
-  /* 主色 */
-  --pink: #F48FB1;           /* 粉色 */
-  --pink-light: #FCE4EC;     /* 浅粉 */
-  --pink-dark: #C2185B;      /* 深粉（重点文字） */
-  --pink-border: #F8BBD0;    /* 粉色边框 */
+/* ---------- 顶栏 ---------- */
+.appbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:18px 2px 13px;gap:8px;
+  border-bottom:1px solid var(--line);
+  position:relative;
+}
+.appbar::after{
+  content:'';position:absolute;left:0;right:0;bottom:-4px;height:1px;
+  background:var(--line);opacity:.5;
+}
+.brand{
+  font-family:var(--font-serif);
+  font-size:21px;font-weight:700;letter-spacing:3px;
+}
+.brand::after{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);margin-left:5px;vertical-align:7px;}
+.icon-btn{
+  width:38px;height:38px;border-radius:10px;
+  background:#FFFDFA;border:1px solid var(--line);
+  display:grid;place-items:center;color:var(--ink2);flex:none;
+  transition:.15s;
+}
+.icon-btn:active{background:#F4EFE3;color:var(--ink);}
+.today-btn{
+  font-family:var(--font-serif);
+  font-size:15px;font-weight:600;color:var(--accent);
+}
+.day-title{text-align:center;flex:1;min-width:0;}
+.dt-main{
+  font-family:var(--font-serif);
+  font-size:17px;font-weight:600;letter-spacing:.5px;
+}
+.dt-sub{font-size:11px;color:var(--ink3);margin-top:2px;}
 
-  --blue: #64B5F6;           /* 蓝色 */
-  --blue-light: #E3F2FD;     /* 浅蓝 */
-  --blue-dark: #1565C0;      /* 深蓝（重点文字） */
-  --blue-border: #BBDEFB;    /* 蓝色边框 */
+/* 日期切换 */
+.day-switch{
+  flex:1;display:flex;align-items:center;justify-content:center;gap:6px;min-width:0;
+}
+.day-switch .day-title{min-width:78px;flex:none;}
+.day-nav{
+  width:30px;height:30px;border-radius:50%;
+  display:grid;place-items:center;
+  font-size:19px;line-height:1;padding-bottom:1px;
+  color:var(--ink2);
+  background:rgba(255,253,250,.85);
+  border:1px solid var(--line);
+  flex:none;transition:.15s;
+}
+.day-nav:active{background:#FFFDFA;color:var(--accent);transform:scale(.92);}
 
-  /* 中性 */
-  --bg: #FDF2F5;             /* 浅粉背景 */
-  --card: #FFFFFF;           /* 白色卡片 */
-  --text: #212121;           /* 黑色文字 */
-  --text-soft: #616161;      /* 次要文字 */
-  --text-light: #9E9E9E;     /* 说明文字 */
+/* ---------- 日历 ---------- */
+.cal-card{
+  background:#FFFDFA;
+  border-radius:4px;
+  border:1px solid var(--line);
+  padding:16px 8px 12px;
+  margin-top:12px;
+  box-shadow:0 1px 1px rgba(0,0,0,.04),0 4px 14px rgba(0,0,0,.055);
+}
+.cal-head{display:flex;align-items:center;justify-content:space-between;padding:0 6px 14px;gap:8px;}
+.cal-left{display:flex;align-items:center;gap:10px;min-width:0;}
+.cal-title{
+  font-family:var(--font-serif);
+  font-size:17px;font-weight:600;letter-spacing:.5px;white-space:nowrap;
+}
+.view-seg{display:flex;background:#F4EFE3;border-radius:9px;padding:2px;flex:none;border:1px solid var(--line);}
+.view-seg button{padding:3px 10px;font-size:11px;border-radius:7px;color:var(--ink2);transition:.15s;}
+.view-seg button.on{background:#FFFDFA;color:var(--ink);font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.09);}
+.cal-nav{display:flex;gap:6px;flex:none;}
+.nav-btn{
+  width:30px;height:30px;border-radius:9px;
+  background:#F4EFE3;border:1px solid var(--line);
+  font-size:15px;color:var(--ink2);
+  display:grid;place-items:center;line-height:1;transition:.15s;
+}
+.nav-btn:active{background:#ECE5D5;}
+.weekdays{
+  display:grid;grid-template-columns:repeat(7,1fr);text-align:center;
+  font-size:12px;color:var(--ink3);padding-bottom:6px;
+}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;}
+.cell{
+  position:relative;aspect-ratio:1/1.28;border-radius:6px;
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+  padding-top:5px;gap:0;font-size:14px;color:var(--ink);
+  transition:background .15s,transform .1s;
+}
+.cell.out{color:#D8D2C5;}
+.cell.future{color:#C5BEB0;}
+.cell.has{background:#FAF7EF;}
+.cell.today{background:var(--accent-soft);}
+.cell.today .dnum{color:var(--accent);font-weight:700;}
+.cell:active{transform:scale(.94);}
+.dnum{line-height:1.15;font-family:var(--font-serif);font-weight:500;}
+.cell.today .dnum{font-weight:700;}
+.lunar-line{
+  font-size:8.5px;line-height:1.3;margin-top:1px;color:var(--ink3);
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  padding:0 2px;text-align:center;
+}
+.lunar-line.is-festival{color:var(--festival);font-weight:600;}
+.lunar-line.is-term{color:var(--term);font-weight:500;}
+.cicon{height:12px;display:flex;align-items:center;justify-content:center;margin-top:1px;}
+.cbar{position:absolute;left:20%;right:20%;bottom:4px;height:2.5px;border-radius:2px;background:#EDE7DA;overflow:hidden;}
+.cbar i{display:block;height:100%;background:var(--accent);border-radius:2px;transition:width .2s;}
+.wdot{position:absolute;top:5px;right:6px;width:4px;height:4px;border-radius:50%;background:var(--down);}
+.cell.today .wdot{background:var(--accent);}
+.legend{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;padding-top:12px;font-size:11px;color:var(--ink3);}
+.legend span{display:flex;align-items:center;}
+.legend .lg{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;background:#ccc;}
+.legend .lg.fest{background:var(--festival);border-radius:50%;}
+.legend .lg.term{background:var(--term);border-radius:50%;}
+.legend .lg.mood{background:#D99A2B;border-radius:50%;}
+.legend .lg.bar{background:var(--accent);}
+.legend .lg.wdot{background:var(--down);border-radius:50%;}
+.tip{text-align:center;font-size:12px;color:var(--ink3);padding:18px 0 0;}
 
-  /* 功能色 */
-  --green: #66BB6A;
-  --green-light: #E8F5E9;
-  --red: #EF5350;
-  --red-light: #FFEBEE;
-  --yellow: #FFB300;
-  --yellow-light: #FFF8E1;
-
-  /* 统一圆角 */
-  --radius: 12px;
-
-  /* 阴影 */
-  --shadow: 0 2px 8px rgba(244,143,177,0.08);
+/* ---------- 年视图 ---------- */
+.year-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding-top:2px;}
+.year-month{
+  background:#FAF7EF;border-radius:6px;border:1px solid #F0EBDF;
+  padding:7px 4px 6px;display:flex;flex-direction:column;align-items:center;
 }
-
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  background: var(--bg); color: var(--text); min-height: 100vh;
-  display: flex; justify-content: center; align-items: flex-start;
-  line-height: 1.6;
+.ym-title{
+  font-family:var(--font-serif);
+  font-size:12px;font-weight:600;color:var(--ink);
+  margin-bottom:5px;padding:2px 8px;border-radius:5px;transition:.15s;letter-spacing:.3px;
 }
-.app {
-  width: 100%; max-width: 480px; min-height: 100vh; background: var(--bg);
-  display: flex; flex-direction: column; position: relative;
+.ym-title:active{background:#ECE5D5;color:var(--accent);}
+.ym-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;width:100%;}
+.ym-cell{
+  aspect-ratio:1;display:flex;align-items:center;justify-content:center;
+  font-size:8px;line-height:1;color:var(--ink2);border-radius:2.5px;position:relative;padding:0;
+  transition:background .15s;
 }
-.header {
-  padding: 18px 16px 16px;
-  background: linear-gradient(135deg, #F8BBD0 0%, #F48FB1 100%);
-  color: white; text-align: center;
-  position: sticky; top: 0; z-index: 10;
-  border-radius: 0 0 var(--radius) var(--radius);
-  box-shadow: 0 4px 16px rgba(244,143,177,0.25);
+.ym-cell.out{color:transparent;}
+.ym-cell.future{color:#D8D2C5;}
+.ym-cell.done{background:var(--accent-soft);}
+.ym-cell.partial{background:#FBF6EC;}
+.ym-cell.today{background:var(--accent);color:#fff;font-weight:700;}
+.ym-cell:active{transform:scale(.88);}
+.ym-cell .ydot{
+  position:absolute;bottom:1px;left:50%;transform:translateX(-50%);
+  width:2.5px;height:2.5px;border-radius:50%;
 }
-.header h1 { font-size: 19px; font-weight: 600; letter-spacing: 0.5px; }
-.header .sub { font-size: 12px; opacity: 0.92; margin-top: 4px; }
-.content { flex: 1; padding: 16px; overflow-y: auto; padding-bottom: 140px; }
-
-/* ============ 底部导航 ============ */
-.nav {
-  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
-  width: 100%; max-width: 480px; display: flex;
-  background: #FFFFFF;
-  border-top: 1px solid var(--pink-border); z-index: 100;
-  padding: 6px 0 8px;
-  border-radius: var(--radius) var(--radius) 0 0;
-}
-.nav-item {
-  flex: 1; padding: 4px 2px; text-align: center; cursor: pointer;
-  color: var(--text-light); font-size: 10px;
-  transition: all 0.2s; user-select: none;
-}
-.nav-item.active { color: var(--pink-dark); }
-.nav-item.active .icon { transform: scale(1.15); }
-.nav-item .icon {
-  font-size: 20px; display: block; margin-bottom: 2px;
-  transition: transform 0.2s;
-}
-
-/* ============ Hero 孕周卡（粉边） ============ */
-.hero {
-  background: #FFFFFF;
-  color: var(--text);
-  border-radius: var(--radius);
-  padding: 22px 20px;
-  margin-bottom: 12px;
-  position: relative;
-  overflow: hidden;
-  cursor: pointer;
-  border: 2px solid var(--pink-border);
-  box-shadow: var(--shadow);
-  transition: all 0.2s;
-}
-.hero::before {
-  content: '🤰';
-  position: absolute; right: -8px; top: -8px;
-  font-size: 90px; opacity: 0.06;
-}
-.hero-week {
-  font-size: 38px; font-weight: 700; line-height: 1.1;
-  letter-spacing: -0.5px;
-  color: var(--pink-dark);
-}
-.hero-week .unit { font-size: 20px; font-weight: 500; }
-.hero-sub {
-  font-size: 13px; color: var(--text-soft); margin-top: 6px;
-}
-.hero-bar {
-  height: 6px; background: var(--pink-light);
-  border-radius: 3px; margin-top: 14px; overflow: hidden;
-}
-.hero-progress {
-  height: 100%; background: linear-gradient(90deg, #F48FB1, #F06292);
-  border-radius: 3px;
-  transition: width 0.6s ease;
-}
-.hero-edit {
-  position: absolute; top: 16px; right: 16px;
-  font-size: 11px; color: var(--pink-dark);
-  background: var(--pink-light);
-  padding: 4px 10px; border-radius: var(--radius);
-}
-
-/* ============ 宝宝状态卡（蓝边） ============ */
-.baby-card {
-  background: #FFFFFF;
-  border-radius: var(--radius);
-  padding: 16px;
-  margin-bottom: 12px;
-  border: 2px solid var(--blue-border);
-  box-shadow: var(--shadow);
-}
-.baby-card h4 {
-  font-size: 15px; color: var(--blue-dark); margin-bottom: 12px;
-  display: flex; align-items: center; justify-content: space-between;
-}
-.baby-card h4 .arrow {
-  font-size: 12px; opacity: 0.6;
-  transition: transform 0.3s;
-}
-.baby-card.collapsed h4 .arrow { transform: rotate(-90deg); }
-.baby-card.collapsed .baby-body { display: none; }
-.baby-row { display: flex; gap: 10px; margin-bottom: 12px; }
-.baby-item {
-  flex: 1; background: var(--blue-light);
-  border-radius: var(--radius); padding: 12px 8px; text-align: center;
-}
-.baby-item .num { font-size: 20px; font-weight: 700; color: var(--blue-dark); }
-.baby-item .lbl { font-size: 11px; color: var(--text-soft); margin-top: 2px; }
-.baby-text {
-  font-size: 13px; color: var(--text); line-height: 1.7;
-  background: #F8FAFE; border-radius: var(--radius); padding: 12px;
-  margin-bottom: 8px;
-  border-left: 3px solid var(--blue-border);
-}
-.baby-text:last-child { margin-bottom: 0; }
-.baby-text strong { color: var(--blue-dark); font-weight: 600; }
-
-/* ============ 快捷入口 ============ */
-.grid-2 {
-  display: grid; grid-template-columns: 1fr 1fr;
-  gap: 12px; margin-bottom: 12px;
-}
-.action-card {
-  background: #FFFFFF;
-  border-radius: var(--radius);
-  padding: 18px 12px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: 2px solid var(--pink-border);
-  box-shadow: var(--shadow);
-}
-.action-card:active { transform: scale(0.97); }
-.action-card.blue { border-color: var(--blue-border); }
-.action-card .icon { font-size: 30px; display: block; margin-bottom: 8px; }
-.action-card .title {
-  font-size: 14px; font-weight: 600; color: var(--pink-dark);
-}
-.action-card.blue .title { color: var(--blue-dark); }
-.action-card .sub {
-  font-size: 11px; color: var(--text-soft); margin-top: 4px;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-
-/* ============ 普通功能卡 ============ */
-.mode-card {
-  background: #FFFFFF;
-  border-radius: var(--radius);
-  padding: 18px 16px;
-  margin-bottom: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: 2px solid var(--pink-border);
-  box-shadow: var(--shadow);
-}
-.mode-card.blue { border-color: var(--blue-border); }
-.mode-card:active { transform: scale(0.98); }
-.mode-card h3 {
-  font-size: 16px; color: var(--pink-dark); margin-bottom: 6px;
-  display: flex; align-items: center; gap: 6px;
-}
-.mode-card.blue h3 { color: var(--blue-dark); }
-.mode-card p { font-size: 13px; color: var(--text-soft); line-height: 1.5; }
-
-/* ============ 按钮 ============ */
-.btn {
-  display: inline-block; padding: 12px 24px;
-  border-radius: var(--radius);
-  border: none; font-size: 15px; cursor: pointer;
-  transition: all 0.2s;
-  font-family: inherit; user-select: none; font-weight: 500;
-}
-.btn-primary {
-  background: linear-gradient(135deg, #F8BBD0, #F48FB1);
-  color: white;
-  box-shadow: 0 4px 12px rgba(244,143,177,0.3);
-}
-.btn-primary:active { transform: scale(0.97); }
-.btn-blue {
-  background: linear-gradient(135deg, #90CAF9, #64B5F6);
-  color: white;
-  box-shadow: 0 4px 12px rgba(100,181,246,0.3);
-}
-.btn-outline {
-  background: #FFFFFF; color: var(--pink-dark);
-  border: 1.5px solid var(--pink);
-}
-.btn-outline:active { background: var(--pink-light); }
-.btn-outline-blue {
-  background: #FFFFFF; color: var(--blue-dark);
-  border: 1.5px solid var(--blue);
-}
-.btn-outline-blue:active { background: var(--blue-light); }
-.btn-danger {
-  background: var(--red); color: white;
-  box-shadow: 0 4px 12px rgba(239,83,80,0.25);
-}
-.btn-block { display: block; width: 100%; }
-.btn-row { display: flex; gap: 12px; margin: 16px 0; }
-.btn-row .btn { flex: 1; }
-
-/* ============ 警告横幅 ============ */
-.warning-banner {
-  padding: 12px 16px; border-radius: var(--radius); margin-bottom: 16px;
-  font-size: 14px; font-weight: 500; line-height: 1.5;
-}
-.warning-red { background: var(--red-light); color: #C62828; border-left: 4px solid var(--red); }
-.warning-yellow { background: var(--yellow-light); color: #E65100; border-left: 4px solid var(--yellow); }
-.warning-green { background: var(--green-light); color: #2E7D32; border-left: 4px solid var(--green); }
-
-/* ============ 计数页 ============ */
-.timer {
-  text-align: center; font-size: 34px; font-weight: 700;
-  color: var(--pink-dark); padding: 20px;
-  font-variant-numeric: tabular-nums; letter-spacing: 2px;
-}
-.stats-row {
-  display: flex; justify-content: space-around; padding: 16px 0;
-  background: #FFFFFF; border-radius: var(--radius); margin: 16px 0;
-  border: 2px solid var(--pink-border);
-  box-shadow: var(--shadow);
-}
-.stat-item { text-align: center; }
-.stat-item .value {
-  font-size: 28px; font-weight: 700; color: var(--pink-dark);
-  font-variant-numeric: tabular-nums;
-}
-.stat-item .label { font-size: 12px; color: var(--text-soft); margin-top: 4px; }
-
-/* 大按钮 */
-.big-button {
-  width: 200px; height: 200px; border-radius: 50%;
-  background: radial-gradient(circle at 30% 30%, #F8BBD0, #F48FB1);
-  color: white; display: flex; flex-direction: column;
-  justify-content: center; align-items: center; margin: 24px auto;
-  cursor: pointer;
-  box-shadow: 0 12px 32px rgba(244,143,177,0.4),
-              inset 0 -4px 12px rgba(0,0,0,0.08);
-  user-select: none; transition: all 0.15s;
-}
-.big-button:active {
-  transform: scale(0.94);
-  box-shadow: 0 6px 16px rgba(244,143,177,0.5),
-              inset 0 -2px 8px rgba(0,0,0,0.1);
-}
-.big-button .tap-icon { font-size: 46px; margin-bottom: 8px; }
-.big-button .label { font-size: 22px; font-weight: 600; }
-
-/* ============ 弹窗 ============ */
-.modal-overlay {
-  position: fixed; inset: 0; background: rgba(33,33,33,0.45);
-  display: flex; justify-content: center; align-items: center;
-  z-index: 1000; padding: 20px;
-}
-.modal {
-  background: #FFFFFF; border-radius: var(--radius); padding: 24px;
-  max-width: 400px; width: 100%; animation: modalIn 0.25s ease;
-  max-height: 90vh; overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
-  border: 2px solid var(--pink-border);
-}
-@keyframes modalIn {
-  from { transform: scale(0.92) translateY(10px); opacity: 0; }
-  to { transform: scale(1) translateY(0); opacity: 1; }
-}
-.modal h2 { font-size: 19px; margin-bottom: 12px; color: var(--pink-dark); }
-.modal p { font-size: 15px; line-height: 1.6; color: var(--text-soft); margin-bottom: 20px; }
-.modal-actions { display: flex; gap: 12px; flex-wrap: wrap; }
-.modal-actions .btn { flex: 1; min-width: 100px; }
-
-/* ============ 表单 ============ */
-.form-group { margin-bottom: 16px; }
-.form-group label {
-  display: block; font-size: 13px; color: var(--text);
-  margin-bottom: 6px; font-weight: 500;
-}
-.form-group input, .form-group select {
-  width: 100%; padding: 12px;
-  border: 1.5px solid var(--blue-border);
-  border-radius: var(--radius);
-  font-size: 15px; font-family: inherit;
-  background: #FFFFFF; color: var(--text);
-  transition: border-color 0.2s;
-}
-.form-group input:focus, .form-group select:focus {
-  outline: none; border-color: var(--blue);
-  box-shadow: 0 0 0 3px var(--blue-light);
-}
-.form-hint { font-size: 11px; color: var(--text-light); margin-top: 4px; line-height: 1.5; }
-.form-row { display: flex; gap: 12px; }
-.form-row .form-group { flex: 1; }
-
-/* ============ 历史记录 ============ */
-.history-item {
-  background: #FFFFFF; border-radius: var(--radius); padding: 16px;
-  margin-bottom: 12px;
-  box-shadow: var(--shadow);
-  border: 2px solid var(--pink-border);
-  border-left: 4px solid var(--pink);
-}
-.history-item.blue {
-  border-color: var(--blue-border);
-  border-left: 4px solid var(--blue);
-}
-.history-item.red {
-  border-color: #FFCDD2;
-  border-left: 4px solid var(--red);
-}
-.history-item.yellow {
-  border-color: #FFE082;
-  border-left: 4px solid var(--yellow);
-}
-.history-item .head {
-  display: flex; justify-content: space-between; margin-bottom: 8px;
-  align-items: center;
-}
-.history-item .date { font-size: 13px; color: var(--text-soft); }
-.history-item .status {
-  font-size: 12px; padding: 3px 12px; border-radius: var(--radius);
-  background: var(--pink-light); color: var(--pink-dark); font-weight: 500;
-}
-.history-item.blue .status { background: var(--blue-light); color: var(--blue-dark); }
-.history-item.red .status { background: var(--red-light); color: #C62828; }
-.history-item.yellow .status { background: var(--yellow-light); color: #E65100; }
-.history-item .info { font-size: 14px; color: var(--text); line-height: 1.6; }
-.history-item .info strong { color: var(--pink-dark); }
-.history-item.blue .info strong { color: var(--blue-dark); }
-.history-item .actions-row {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-top: 12px; padding-top: 12px;
-  border-top: 1px solid var(--pink-light);
-}
-.history-item.blue .actions-row { border-top-color: var(--blue-light); }
-.history-item .toggle-btn {
-  font-size: 13px; color: var(--pink-dark); cursor: pointer;
-  user-select: none; padding: 4px 10px; border-radius: var(--radius);
-  background: var(--pink-light);
-}
-.history-item.blue .toggle-btn { color: var(--blue-dark); background: var(--blue-light); }
-.history-item .delete-btn {
-  font-size: 13px; color: var(--red); cursor: pointer; user-select: none;
-  padding: 4px 12px; border-radius: var(--radius); background: var(--red-light);
-}
-.detail-list {
-  margin-top: 12px; padding: 12px; background: var(--pink-light);
-  border-radius: var(--radius); max-height: 300px; overflow-y: auto;
-}
-.detail-item {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 8px 4px; font-size: 13px;
-  border-bottom: 1px dashed #F8BBD0;
-}
-.detail-item:last-child { border-bottom: none; }
-.detail-item .time { color: var(--text); font-variant-numeric: tabular-nums; }
-.detail-item .tag {
-  font-size: 11px; padding: 3px 10px; border-radius: var(--radius);
-  margin-left: 8px; font-weight: 500;
-}
-.detail-item .tag.effective { background: var(--green-light); color: #2E7D32; }
-.detail-item .tag.merged { background: #ECEFF1; color: #78909C; }
-.detail-item .tag.hiccup { background: var(--blue-light); color: var(--blue-dark); }
-
-/* ============ 空状态 ============ */
-.empty {
-  text-align: center; padding: 60px 20px; color: var(--text-light);
-}
-.empty .icon { font-size: 60px; margin-bottom: 12px; opacity: 0.6; }
-
-/* ============ 筛选 ============ */
-.filter-row {
-  display: flex; gap: 8px; margin-bottom: 16px;
-  overflow-x: auto; padding-bottom: 4px;
-}
-.filter-row::-webkit-scrollbar { display: none; }
-.filter-btn {
-  padding: 7px 16px; border-radius: var(--radius);
-  border: 1.5px solid var(--pink-border); background: #FFFFFF;
-  color: var(--text-soft); font-size: 13px;
-  cursor: pointer; white-space: nowrap;
-  transition: all 0.2s;
-}
-.filter-btn.active {
-  background: linear-gradient(135deg, #F8BBD0, #F48FB1);
-  color: white; border-color: transparent;
+.ym-cell.today .ydot{background:#fff !important;}
+@media (max-width:360px){
+  .year-grid{gap:6px;}
+  .ym-cell{font-size:7px;}
 }
 
-/* ============ 统计 ============ */
-.stats-card {
-  background: #FFFFFF; border-radius: var(--radius); padding: 18px;
-  margin-bottom: 12px;
-  box-shadow: var(--shadow);
-  border: 2px solid var(--pink-border);
+/* ---------- 页面标签 ---------- */
+.dtab-bar{
+  position:relative;display:flex;gap:5px;
+  background:transparent;
+  padding:0;
+  margin-top:16px;
+  border-bottom:1.5px solid var(--line);
+  touch-action:pan-y;
 }
-.stats-card.blue { border-color: var(--blue-border); }
-.stats-card h3 {
-  font-size: 14px; color: var(--text-soft);
-  margin-bottom: 14px; font-weight: 600;
+.dtab{
+  flex:1 1 0;min-width:0;
+  display:flex;align-items:center;justify-content:center;gap:5px;
+  padding:9px 4px 8px;border-radius:9px 9px 0 0;
+  font-size:13px;color:var(--ink2);
+  background:#F4EFE3;
+  border:1px solid var(--line);
+  border-bottom:none;
+  white-space:nowrap;position:relative;top:1.5px;
+  touch-action:pan-y;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
+  transition:background .18s,color .18s;
+  will-change:transform;
 }
-.stats-card.blue h3 { color: var(--blue-dark); }
-.bar-chart {
-  display: flex; align-items: flex-end; gap: 8px;
-  height: 120px; padding: 8px 0;
+.dtab:active{background:#ECE5D5;}
+.dtab.on{
+  background:#FFFDFA;color:var(--ink);font-weight:600;
+  box-shadow:0 -2px 8px rgba(0,0,0,.035);
 }
-.bar-item {
-  flex: 1; display: flex; flex-direction: column;
-  align-items: center; height: 100%; justify-content: flex-end;
+.dtab.dragging{
+  background:#FFFDFA;color:var(--ink);font-weight:600;
+  border:1px solid var(--line);
+  border-radius:9px;
+  box-shadow:0 10px 26px rgba(0,0,0,.16);
+  z-index:30;position:relative;transition:none;top:0;
 }
-.bar {
-  width: 100%;
-  background: linear-gradient(180deg, #F8BBD0 0%, #F48FB1 100%);
-  border-radius: 6px 6px 0 0; min-height: 4px;
-  transition: height 0.4s ease;
-}
-.bar.blue { background: linear-gradient(180deg, #90CAF9 0%, #64B5F6 100%); }
-.bar-label {
-  font-size: 10px; color: var(--text-light); margin-top: 6px;
-  text-align: center; line-height: 1.3;
-}
+.dtab-emoji{font-size:14px;line-height:1;}
+.drag-hint{text-align:center;font-size:11px;color:#B5AC9B;padding:9px 0 2px;}
 
-/* ============ B超 ============ */
-.bpd-record {
-  background: #FFFFFF; border-radius: var(--radius); padding: 16px;
-  margin-bottom: 12px;
-  box-shadow: var(--shadow);
-  border: 2px solid var(--blue-border);
-  border-left: 4px solid var(--blue);
+/* ---------- 卡片 ---------- */
+.card{
+  background:#FFFDFA;
+  border-radius:4px;
+  border:1px solid var(--line);
+  padding:16px;margin-top:12px;
+  box-shadow:0 1px 1px rgba(0,0,0,.04),0 4px 14px rgba(0,0,0,.05);
 }
-.bpd-record .head {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 12px;
-}
-.bpd-record .head .date {
-  font-size: 14px; color: var(--blue-dark); font-weight: 600;
-}
-.bpd-record .head .week { font-size: 12px; color: var(--text-soft); }
-.bpd-record .data-grid {
-  display: grid; grid-template-columns: repeat(3, 1fr);
-  gap: 8px; margin-bottom: 12px;
-}
-.bpd-record .data-item {
-  background: var(--blue-light); border-radius: var(--radius);
-  padding: 10px 6px; text-align: center;
-}
-.bpd-record .data-item .val {
-  font-size: 16px; font-weight: 700; color: var(--blue-dark);
-}
-.bpd-record .data-item .lbl { font-size: 10px; color: var(--text-soft); margin-top: 2px; }
-.bpd-record .efw-row {
-  background: var(--pink-light);
-  border-radius: var(--radius); padding: 12px;
-  text-align: center; margin-bottom: 12px;
-}
-.bpd-record .efw-row .num {
-  font-size: 24px; font-weight: 700; color: var(--pink-dark);
-}
-.bpd-record .efw-row .lbl { font-size: 11px; color: var(--text-soft); }
-.bpd-record .status-box {
-  border-radius: var(--radius); padding: 10px 12px;
-  font-size: 12px; line-height: 1.6; margin-bottom: 10px;
-}
-.status-normal { background: var(--green-light); color: #2E7D32; }
-.status-small { background: var(--yellow-light); color: #E65100; }
-.status-large { background: var(--red-light); color: #C62828; }
-.bpd-record .actions-row {
-  display: flex; justify-content: flex-end; gap: 8px;
-  padding-top: 12px; border-top: 1px solid var(--blue-light);
-}
-.bpd-record .delete-btn {
-  font-size: 13px; color: var(--red); cursor: pointer;
-  padding: 4px 12px; border-radius: var(--radius); background: var(--red-light);
-}
+.card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px;}
+.card-head h3{margin:0;font-size:15px;font-weight:600;font-family:var(--font-serif);letter-spacing:.3px;}
+.hint{font-size:11px;color:var(--ink3);}
+.head-right{display:flex;align-items:center;gap:8px;}
 
-.section-title {
-  font-size: 13px; color: var(--text-soft); margin: 16px 0 12px;
-  display: flex; justify-content: space-between; align-items: center;
+/* ---------- 心情 ---------- */
+.mood-picker{display:flex;flex-wrap:wrap;justify-content:center;gap:2px;}
+.mood-btn{
+  flex:0 0 calc(20% - 4px);display:flex;flex-direction:column;align-items:center;gap:5px;
+  padding:9px 0;border-radius:10px;transition:.15s;
 }
+.mood-btn:active{background:#FAF7EF;transform:scale(.93);}
+.ml{font-size:11px;color:var(--ink2);}
+.x-btn{
+  margin-left:auto;width:26px;height:26px;border-radius:8px;color:#C4BCAB;font-size:12px;
+  display:grid;place-items:center;flex:none;
+}
+.x-btn:active{background:#F4EFE3;color:var(--ink2);}
+.empty-line{font-size:12px;color:var(--ink3);text-align:center;padding:16px 0 4px;}
 
-/* ============ 提示卡 ============ */
-.tip-card {
-  background: var(--pink-light);
-  border-radius: var(--radius); padding: 16px; margin-top: 16px;
-  font-size: 12px; color: var(--text-soft); line-height: 1.7;
-  border: 1.5px solid var(--pink-border);
+/* ---------- 随手记 ---------- */
+.note-form{display:flex;gap:8px;align-items:flex-end;}
+.note-form textarea{
+  flex:1;min-width:0;border:1.5px solid var(--line);border-radius:9px;
+  padding:9px 11px;font-size:13px;line-height:1.55;resize:none;outline:none;
+  background:#FBF8F0;color:var(--ink);min-height:44px;
 }
-.tip-card strong { color: var(--pink-dark); }
-.tip-card.blue {
-  background: var(--blue-light);
-  border-color: var(--blue-border);
+.note-form textarea:focus{border-color:var(--accent);background:#FFFDFA;}
+
+/* ---------- 混合时间线 ---------- */
+.tl-list{margin-top:2px;}
+.tl-row{display:flex;align-items:flex-start;gap:9px;padding:9px 0;border-bottom:1px solid #F2EDE2;}
+.tl-row:last-child{border-bottom:none;padding-bottom:0;}
+.tl-time{font-size:12px;color:var(--ink3);font-variant-numeric:tabular-nums;flex:none;width:36px;padding-top:2px;}
+.tl-body{flex:1;min-width:0;display:flex;align-items:center;gap:7px;}
+.tl-body.is-note{display:block;padding-top:1px;}
+.tl-name{font-size:13px;color:var(--ink2);}
+.tl-text{font-size:13px;line-height:1.55;color:var(--ink);word-break:break-word;white-space:pre-wrap;}
+.tl-row .x-btn{margin-left:auto;flex:none;margin-top:0;}
+.order-btn{display:flex;align-items:center;gap:3px;}
+
+/* ---------- 体重 ---------- */
+.seg{display:flex;background:#F4EFE3;border-radius:9px;padding:2px;flex:none;border:1px solid var(--line);}
+.seg button{padding:4px 12px;font-size:12px;border-radius:7px;color:var(--ink2);transition:.15s;}
+.seg button.on{background:#FFFDFA;color:var(--ink);font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.09);}
+.w-form{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.w-input{
+  flex:1;min-width:0;border:1.5px solid var(--line);border-radius:9px;
+  padding:10px 12px;font-size:17px;font-weight:600;
+  background:#FBF8F0;outline:none;color:var(--ink);transition:.15s;
 }
-.tip-card.blue strong { color: var(--blue-dark); }
+.w-input:focus{border-color:var(--accent);background:#FFFDFA;}
+.w-input::-webkit-outer-spin-button,.w-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+.w-input{-moz-appearance:textfield;}
+.w-unit{font-size:13px;color:var(--ink2);flex:none;}
+.btn{
+  background:var(--accent);color:#fff;border-radius:9px;padding:10px 16px;
+  font-size:14px;font-weight:600;flex:none;transition:.15s;
+  box-shadow:0 2px 6px rgba(201,107,74,.28);
+}
+.btn:active{filter:brightness(.94);transform:scale(.97);}
+.btn.ghost{background:#F4EFE3;color:var(--ink2);box-shadow:none;border:1px solid var(--line);}
+.w-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid #F2EDE2;}
+.w-t{font-size:12px;color:var(--ink3);font-variant-numeric:tabular-nums;}
+.w-v{font-size:16px;font-weight:600;font-family:var(--font-serif);}
+.w-v i{font-size:11px;font-weight:400;color:var(--ink3);font-style:normal;margin-left:2px;font-family:inherit;}
+.mini{
+  font-size:11px;color:var(--ink2);background:#F5F0E4;
+  border:1px solid var(--line);border-radius:8px;padding:5px 10px;flex:none;
+}
+.mini:active{background:#ECE5D5;}
+.mini.danger{color:var(--up);}
+.w-row .mini:first-of-type{margin-left:auto;}
+
+/* ---------- 体重统计内嵌 ---------- */
+.stat-summary{display:flex;gap:8px;margin-bottom:14px;}
+.stat-box{flex:1;min-width:0;background:#FAF7EF;border-radius:9px;padding:11px 10px;border:1px solid #F0EBDF;}
+.stat-box .k{font-size:11px;color:var(--ink3);white-space:nowrap;}
+.stat-box .v{
+  font-size:19px;font-weight:700;margin-top:3px;font-variant-numeric:tabular-nums;
+  white-space:nowrap;letter-spacing:-.3px;font-family:var(--font-serif);
+}
+.stat-box .v i{font-size:10px;font-weight:400;color:var(--ink3);font-style:normal;margin-left:2px;font-family:inherit;}
+.stat-box .v.flat{color:var(--ink2);}
+.stat-tabs{display:flex;background:#F1EBDF;border-radius:9px;padding:3px;margin-bottom:12px;}
+.stat-tabs button{flex:1;padding:7px;border-radius:7px;font-size:12px;color:var(--ink2);transition:.15s;}
+.stat-tabs button.on{background:#FFFDFA;color:var(--ink);font-weight:600;box-shadow:0 1px 5px rgba(0,0,0,.08);}
+.chart{width:100%;height:auto;display:block;}
+.chart-empty{text-align:center;color:var(--ink3);font-size:13px;padding:36px 0;}
+.chart-empty span{font-size:11px;color:#C0B7A6;}
+
+/* ---------- 自定义模块 ---------- */
+.mod{padding:11px 0;border-top:1px solid #F2EDE2;}
+.mod:first-of-type{border-top:none;padding-top:2px;}
+.mod-head{display:flex;align-items:center;gap:8px;margin-bottom:9px;}
+.mod-name{font-size:14px;font-weight:500;display:flex;align-items:center;}
+.done-badge{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:16px;height:16px;border-radius:50%;background:var(--down);color:#fff;
+  font-size:10px;margin-left:6px;flex:none;animation:pop .35s cubic-bezier(.3,1.6,.5,1);
+}
+@keyframes pop{0%{transform:scale(0)}70%{transform:scale(1.25)}100%{transform:scale(1)}}
+.all-done{
+  font-size:11px;color:#B7791F;font-weight:600;background:#FBF1DE;
+  border-radius:8px;padding:3px 8px;white-space:nowrap;
+}
+.mod-count{margin-left:auto;font-size:12px;color:var(--ink3);font-variant-numeric:tabular-nums;}
+.mod-del{width:22px;height:22px;border-radius:7px;color:#CFC7B6;font-size:11px;display:grid;place-items:center;flex:none;}
+.mod-del:active{background:#FBEDE9;color:var(--up);}
+.mod-slots{display:flex;flex-wrap:wrap;gap:8px;}
+.slot{
+  width:38px;height:38px;border-radius:10px;background:#F5F0E4;
+  display:grid;place-items:center;font-size:17px;
+  filter:grayscale(1);opacity:.32;
+  transition:.2s cubic-bezier(.3,1.4,.5,1);
+}
+.slot.on{
+  filter:none;opacity:1;background:var(--accent-soft);
+  box-shadow:inset 0 0 0 1.5px rgba(201,107,74,.38);
+  transform:translateY(-1px);
+}
+.slot:active{transform:scale(.88);}
+
+/* ---------- 添加模块表单 ---------- */
+.add-form{margin-top:12px;border-top:1px dashed var(--line);padding-top:14px;}
+.emoji-row{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:11px;max-height:150px;overflow-y:auto;padding:2px;}
+.emo{
+  width:35px;height:35px;border-radius:10px;background:#F5F0E4;
+  display:grid;place-items:center;font-size:17px;transition:.15s;
+}
+.emo.on{background:var(--accent-soft);box-shadow:inset 0 0 0 1.5px var(--accent);transform:scale(1.06);}
+.add-form input{
+  border:1.5px solid var(--line);border-radius:9px;padding:10px 12px;font-size:14px;
+  outline:none;width:100%;background:#FBF8F0;color:var(--ink);
+}
+.add-form input:focus{border-color:var(--accent);background:#FFFDFA;}
+.target-row{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:13px;color:var(--ink2);}
+.target-row input{width:80px;text-align:center;}
+.form-note{font-size:11px;color:var(--ink3);margin-top:10px;line-height:1.6;}
+.form-actions{display:flex;gap:10px;margin-top:14px;}
+.form-actions .btn{flex:1;text-align:center;}
+
+/* ---------- 弹窗 ---------- */
+#modalRoot{position:fixed;inset:0;z-index:100;pointer-events:none;}
+.modal-mask{
+  position:absolute;inset:0;background:rgba(45,38,30,.46);
+  display:flex;align-items:center;justify-content:center;padding:24px;
+  opacity:0;transition:opacity .2s;pointer-events:auto;
+  -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);
+}
+.modal-mask.show{opacity:1;}
+.modal-card{
+  width:100%;max-width:330px;
+  background:#FFFDFA;
+  border:1px solid var(--line);
+  border-radius:6px;
+  padding:22px 20px;
+  box-shadow:0 20px 60px rgba(0,0,0,.28);
+  transform:scale(.92) translateY(8px);opacity:0;
+  transition:transform .26s cubic-bezier(.3,1.3,.5,1),opacity .2s;
+  max-height:82vh;overflow:auto;
+}
+.modal-mask.show .modal-card{transform:none;opacity:1;}
+.modal-title{font-size:16px;font-weight:600;text-align:center;font-family:var(--font-serif);}
+.modal-actions{display:flex;gap:10px;margin-top:20px;}
+.modal-actions .btn{flex:1;text-align:center;}
+.btn.danger{background:var(--up);box-shadow:0 2px 6px rgba(192,85,75,.3);}
+
+/* 夸奖弹窗 */
+.praise{text-align:center;}
+.praise-emoji{font-size:46px;line-height:1;animation:bounce 1.8s ease-in-out infinite;}
+@keyframes bounce{
+  0%,100%{transform:translateY(0) scale(1);}
+  30%{transform:translateY(-7px) scale(1.05);}
+  55%{transform:translateY(0) scale(1);}
+  75%{transform:translateY(-2px) scale(1.01);}
+}
+.praise h3{margin:14px 0 6px;font-size:18px;letter-spacing:.5px;font-family:var(--font-serif);}
+.praise p{margin:0 0 4px;font-size:13px;color:var(--ink2);line-height:1.7;}
+
+.praise-strong{position:relative;padding-top:4px;}
+.praise-strong::before{
+  content:'';position:absolute;left:-12px;right:-12px;top:-14px;height:120px;
+  background:radial-gradient(circle at 50% 0%, rgba(201,107,74,.16), transparent 72%);
+  pointer-events:none;z-index:0;
+}
+.praise-strong > *{position:relative;z-index:1;}
+.praise-strong .praise-emoji{font-size:66px;animation:praise-pop 1.2s cubic-bezier(.3,1.5,.5,1) infinite;}
+@keyframes praise-pop{
+  0%,100%{transform:scale(1) rotate(0deg);}
+  25%{transform:scale(1.15) rotate(-6deg);}
+  50%{transform:scale(1.05) rotate(0deg);}
+  75%{transform:scale(1.12) rotate(6deg);}
+}
+.praise-strong h3{
+  margin:12px 0 6px;font-size:24px;letter-spacing:2px;
+  background:linear-gradient(135deg,#C96B4A,#D99A2B,#B85C7A);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  -webkit-text-fill-color:transparent;
+}
+.praise-strong p{font-size:14px;color:var(--ink);font-weight:500;margin-bottom:2px;}
+.praise-strong .stars{font-size:18px;letter-spacing:6px;margin:10px 0 2px;
+  animation:star-glow 1.6s ease-in-out infinite;}
+@keyframes star-glow{
+  0%,100%{opacity:.55;transform:scale(1);}
+  50%{opacity:1;transform:scale(1.08);}
+}
+.praise-strong .btn{
+  background:linear-gradient(135deg,#C96B4A,#D99A2B);
+  box-shadow:0 6px 18px rgba(201,107,74,.32);
+  margin-top:16px !important;
+}
 </style>
 </head>
 <body>
-<div class="app" id="app"></div>
+<div id="app"></div>
+<div id="modalRoot"></div>
+
 <script>
-// ==================== B超参考值 ====================
-const BPD_REF = {
-  28: { bpd: [66.3, 75.1], hc: [248.6, 271.5], ac: [221.2, 252.1], fl: [47.8, 54.8] },
-  32: { bpd: [76.2, 85.7], hc: [282.1, 307.5], ac: [260.2, 298.5], fl: [55.7, 63.5] },
-  36: { bpd: [83.5, 93.7], hc: [305.0, 334.7], ac: [295.4, 342.9], fl: [62.4, 71.2] },
-  40: { bpd: [87.7, 98.6], hc: [315.9, 350.3], ac: [325.2, 383.8], fl: [67.7, 77.4] }
-};
-function getBpdRef(weeks) {
-  const weeksList = [28, 32, 36, 40];
-  if (weeks <= 28) return BPD_REF[28];
-  if (weeks >= 40) return BPD_REF[40];
-  for (let i = 0; i < weeksList.length - 1; i++) {
-    const w1 = weeksList[i], w2 = weeksList[i+1];
-    if (weeks >= w1 && weeks <= w2) {
-      const t = (weeks - w1) / (w2 - w1);
-      const r1 = BPD_REF[w1], r2 = BPD_REF[w2];
-      const lerp = (a, b) => a + (b - a) * t;
-      return {
-        bpd: [lerp(r1.bpd[0], r2.bpd[0]), lerp(r1.bpd[1], r2.bpd[1])],
-        hc: [lerp(r1.hc[0], r2.hc[0]), lerp(r1.hc[1], r2.hc[1])],
-        ac: [lerp(r1.ac[0], r2.ac[0]), lerp(r1.ac[1], r2.ac[1])],
-        fl: [lerp(r1.fl[0], r2.fl[0]), lerp(r1.fl[1], r2.fl[1])]
-      };
-    }
-  }
-  return BPD_REF[28];
-}
-function estimateEFW(bpdCm, acCm, flCm) {
-  if (!acCm || !flCm) return null;
-  const log10EFW = 1.304 + 0.05281 * acCm + 0.1938 * flCm - 0.004 * acCm * flCm;
-  return Math.round(Math.pow(10, log10EFW));
-}
-function getEFWRef(weeks) {
-  if (weeks <= 28) return { low: 1000, high: 1500 };
-  if (weeks >= 40) return { low: 3000, high: 3800 };
-  const t = (weeks - 28) / 12;
-  return { low: Math.round(1000 + (3000 - 1000) * t), high: Math.round(1500 + (3800 - 1500) * t) };
-}
-function assessAmniotic(af) {
-  if (af === null || af === undefined || isNaN(af)) return null;
-  if (af < 2) return { status: 'low', text: '过少' };
-  if (af < 3) return { status: 'low', text: '偏少' };
-  if (af <= 8) return { status: 'normal', text: '正常' };
-  if (af <= 10) return { status: 'high', text: '偏多' };
-  return { status: 'high', text: '过多' };
-}
-function assessFhr(fhr) {
-  if (fhr === null || fhr === undefined || isNaN(fhr)) return null;
-  if (fhr < 110) return { status: 'low', text: '偏慢' };
-  if (fhr <= 160) return { status: 'normal', text: '正常' };
-  return { status: 'high', text: '偏快' };
-}
-function assessBabyStatus(weeks, bpd, hc, ac, fl, efw) {
-  const ref = getBpdRef(weeks);
-  const efwRef = getEFWRef(weeks);
-  const issues = [];
-  const checkParam = (name, val, range) => {
-    if (val === null || val === undefined || isNaN(val)) return;
-    if (val < range[0]) issues.push({ param: name, status: 'small', val, ref: range });
-    else if (val > range[1]) issues.push({ param: name, status: 'large', val, ref: range });
-  };
-  checkParam('双顶径(BPD)', bpd, ref.bpd);
-  checkParam('头围(HC)', hc, ref.hc);
-  checkParam('腹围(AC)', ac, ref.ac);
-  checkParam('股骨长(FL)', fl, ref.fl);
-  if (efw !== null) {
-    if (efw < efwRef.low) issues.push({ param: '估算体重', status: 'small', val: efw, ref: [efwRef.low, efwRef.high] });
-    else if (efw > efwRef.high) issues.push({ param: '估算体重', status: 'large', val: efw, ref: [efwRef.low, efwRef.high] });
-  }
-  let overall = 'normal';
-  if (issues.length > 0) {
-    const hasSmall = issues.some(i => i.status === 'small');
-    const hasLarge = issues.some(i => i.status === 'large');
-    if (hasSmall && !hasLarge) overall = 'small';
-    else if (hasLarge && !hasSmall) overall = 'large';
-    else overall = 'mixed';
-  }
-  return { overall, issues, ref, efwRef };
-}
-
-// ==================== 宝宝状态数据 ====================
-const BABY_INFO = {
-  28: { length: '约 37.5 厘米', weight: '约 1100 克', highlight: '宝宝的眼睛可以睁开了，能感受到光线变化。大脑发育进入快速期，开始有睡眠和清醒的周期。', movement: '胎动有力且规律，是计数胎动的最佳开始时机。' },
-  29: { length: '约 38.5 厘米', weight: '约 1250 克', highlight: '皮下脂肪开始沉积，皮肤不再那么透明。肌肉和肺部继续成熟。', movement: '活动空间还比较充裕，胎动活泼。' },
-  30: { length: '约 40 厘米', weight: '约 1400 克', highlight: '大脑表面开始出现褶皱，能控制体温了。骨髓开始接管红细胞的生成。', movement: '胎动有力，能感觉到宝宝在“拳打脚踢”。' },
-  31: { length: '约 41 厘米', weight: '约 1600 克', highlight: '五官发育进一步完善，能分辨光明和黑暗。肺部和消化系统接近成熟。', movement: '活动仍然频繁，但空间开始变挤。' },
-  32: { length: '约 43 厘米', weight: '约 1800 克', highlight: '5种感觉全部开始工作，能将头从一边转向另一边。肺和胃肠功能接近成熟。', movement: '胎动次数可能比之前减少，动作也减弱，因为子宫空间快被占满了。只要符合规律就没问题。' },
-  33: { length: '约 44 厘米', weight: '约 2000 克', highlight: '呼吸系统和消化系统接近成熟。头骨很软，为分娩做准备。脑神经发达。', movement: '运动感觉更像“摇晃”而非踢踹，因为活动空间更小了。' },
-  34: { length: '约 44 厘米', weight: '约 2300 克', highlight: '已经具备新生儿的外观，皮下脂肪增加。能区分光明和黑暗。', movement: '胎动可能不如之前频繁，但力度仍然很强。' },
-  35: { length: '约 46 厘米', weight: '约 2500 克', highlight: '内脏及性器官发育齐全，已具备呼吸和吸吮能力，听力也充分发育。', movement: '活动空间继续缩小，胎动以蠕动和滚动为主。' },
-  36: { length: '约 47.5 厘米', weight: '约 2800 克', highlight: '肾脏已发育完全，肝脏能处理代谢废物。宝宝通常呈头朝下的姿势。', movement: '胎动模式可能改变，某些时段活动多、某些时段少。' },
-  37: { length: '约 48 厘米', weight: '约 2900 克', highlight: '宝宝已经足月，肺部发育基本成熟。继续积累脂肪。', movement: '入盆后活动空间进一步减小，胎动以局部蠕动为主。' },
-  38: { length: '约 49 厘米', weight: '约 3100 克', highlight: '各器官发育完全，胎毛大部分消退。练习吸吮和吞咽。', movement: '胎动仍然重要，但幅度可能更小。' },
-  39: { length: '约 50 厘米', weight: '约 3300 克', highlight: '继续储存脂肪，皮肤变得光滑。脑部仍在快速发育。', movement: '活动空间极小，胎动以轻微蠕动和伸展为主。' },
-  40: { length: '约 51 厘米', weight: '约 3500 克', highlight: '宝宝已完全成熟，随时准备出生。头骨仍然柔软。', movement: '胎动可能变得更少，但每天仍应保持规律活动。' }
-};
-
-// ==================== 状态 ====================
-const STORAGE_KEY = 'fetal_movement_app_v9';
-let state = {
-  activeView: 'home',
-  currentSession: null,
-  history: [],
-  filter: 'all',
-  expandedIds: {},
-  babyCollapsed: false,
-  profile: { dueDate: null, lmpDate: null, bpdRecords: [] }
-};
-function loadState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const d = JSON.parse(raw);
-      state.history = d.history || [];
-      state.currentSession = d.currentSession || null;
-      state.profile = d.profile || { dueDate: null, lmpDate: null, bpdRecords: [] };
-      if (!state.profile.bpdRecords) state.profile.bpdRecords = [];
-      if (d.babyCollapsed !== undefined) state.babyCollapsed = d.babyCollapsed;
-    }
-  } catch (e) { console.error(e); }
-}
-function saveState() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      history: state.history,
-      currentSession: state.currentSession,
-      profile: state.profile,
-      babyCollapsed: state.babyCollapsed
-    }));
-  } catch (e) { console.error(e); }
-}
-
-// ==================== 工具 ====================
-const pad = n => String(n).padStart(2, '0');
-function formatTime(ms) {
-  if (ms < 0) ms = 0;
-  const t = Math.floor(ms / 1000);
-  return `${pad(Math.floor(t/3600))}:${pad(Math.floor((t%3600)/60))}:${pad(t%60)}`;
-}
-function formatDate(ts) {
-  const d = new Date(ts);
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-}
-function formatDateCN(str) {
-  if (!str) return '';
-  const [y, m, d] = str.split('-');
-  return `${y}年${parseInt(m)}月${parseInt(d)}日`;
-}
-function formatDateTime(ts) {
-  const d = new Date(ts);
-  return `${formatDate(ts)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-function formatTimeOnly(ts) {
-  const d = new Date(ts);
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-}
-function periodLabel(p) {
-  return { morning: '早间', noon: '午间', evening: '晚间' }[p] || '';
-}
-function recomputeEffectiveCount(events) {
-  let effective = 0, lastEffectiveTime = null;
-  for (const e of events) {
-    if (e.isHiccup) continue;
-    if (lastEffectiveTime === null || e.time - lastEffectiveTime >= 5*60*1000) {
-      effective++; lastEffectiveTime = e.time;
-    }
-  }
-  return { effective, lastEffectiveTime };
-}
-function computeEventTags(events) {
-  let lastEffectiveTime = null;
-  return events.map(e => {
-    if (e.isHiccup) return { ...e, tag: 'hiccup' };
-    if (lastEffectiveTime === null || e.time - lastEffectiveTime >= 5*60*1000) {
-      lastEffectiveTime = e.time;
-      return { ...e, tag: 'effective' };
-    }
-    return { ...e, tag: 'merged' };
+/* ============================================================
+   PWA：Service Worker 注册
+   ============================================================ */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(err => {
+      console.warn('[PWA] Service Worker 注册失败（file:// 打开时属正常）:', err);
+    });
   });
 }
 
-// ==================== 孕周计算 ====================
-function calcPregnancy() {
-  const p = state.profile;
-  let lmp = null;
-  if (p.lmpDate) lmp = new Date(p.lmpDate + 'T00:00:00');
-  else if (p.dueDate) {
-    const due = new Date(p.dueDate + 'T00:00:00');
-    lmp = new Date(due.getTime() - 280 * 86400000);
-  }
-  if (!lmp) return null;
-  const today = new Date(); today.setHours(0,0,0,0);
-  const diffDays = Math.floor((today - lmp) / 86400000);
-  if (diffDays < 0) return { error: '日期设置在未来，请检查' };
-  if (diffDays > 300) return { error: '已超过预产期较久，请检查日期' };
-  const weeks = Math.floor(diffDays / 7);
-  const days = diffDays % 7;
-  const dueDate = new Date(lmp.getTime() + 280 * 86400000);
-  const daysToDue = Math.ceil((dueDate - today) / 86400000);
-  let trimester = '孕早期';
-  if (weeks >= 13 && weeks < 28) trimester = '孕中期';
-  else if (weeks >= 28) trimester = '孕晚期';
-  return { weeks, days, diffDays, dueDate, daysToDue, trimester, progress: Math.min(100, (diffDays / 280) * 100) };
-}
-function calcWeeksAtDate(dateStr) {
-  const p = state.profile;
-  let lmp = null;
-  if (p.lmpDate) lmp = new Date(p.lmpDate + 'T00:00:00');
-  else if (p.dueDate) {
-    const due = new Date(p.dueDate + 'T00:00:00');
-    lmp = new Date(due.getTime() - 280 * 86400000);
-  }
-  if (!lmp) return null;
-  const d = new Date(dateStr + 'T00:00:00');
-  const diffDays = Math.floor((d - lmp) / 86400000);
-  if (diffDays < 0 || diffDays > 300) return null;
-  return Math.floor(diffDays / 7);
-}
-function getBabyInfo(weeks) {
-  if (BABY_INFO[weeks]) return BABY_INFO[weeks];
-  if (weeks < 28) return { length: '—', weight: '—', highlight: '胎动计数通常建议从孕28周开始。', movement: '孕中期胎动逐渐明显，但还不需要刻板计数。' };
-  if (weeks > 40) return { length: '约 51 厘米', weight: '约 3500 克以上', highlight: '宝宝已经完全成熟，随时可能出生。', movement: '胎动仍然重要，请继续关注。' };
-  return null;
-}
+/* ============================================================
+   1. 数据层
+   ============================================================ */
+const STORE_KEY = 'riji-v1';
+const MOODS = [
+  { key:'joy',     name:'开心', color:'#D99A2B' },
+  { key:'excited', name:'兴奋', color:'#D8753D' },
+  { key:'heart',   name:'心动', color:'#C25C7E' },
+  { key:'calm',    name:'平静', color:'#4C8B7A' },
+  { key:'meh',     name:'一般', color:'#98A2B3' },
+  { key:'sad',     name:'难过', color:'#5B8DEF' },
+  { key:'angry',   name:'生气', color:'#C0554B' },
+];
+const EMOJIS = [
+  '💧','🍎','🏃','📖','🧘','☀️','🌙','💊','🎸','✍️','🥗','🛌',
+  '🚶','🚴','🏊','🦷','🧴','🧹','🍵','🥛','🎯','🎨','🌱','💤',
+  '🧠','🚭','🐱','🍇','🎹','🧸','🎧','🪴','🥕','🍊','🛁','⏰'
+];
 
-// ==================== 通用确认弹窗 ====================
-function showConfirmModal(title, message, confirmText, onConfirm, danger) {
-  document.body.insertAdjacentHTML('beforeend',
-    `<div class="modal-overlay" id="confirmModal"><div class="modal">
-      <h2>${title}</h2>
-      <p>${message}</p>
-      <div class="modal-actions">
-        <button class="btn btn-outline" onclick="closeConfirmModal()">取消</button>
-        <button class="btn ${danger ? 'btn-danger' : 'btn-primary'}" id="confirmBtn">${confirmText}</button>
-      </div>
-    </div></div>`);
-  document.getElementById('confirmBtn').onclick = () => {
-    closeConfirmModal();
-    onConfirm();
+const PAGES = {
+  mood:   { name:'心情', emoji:'😊' },
+  weight: { name:'体重', emoji:'⚖️' },
+  check:  { name:'打卡', emoji:'✅' },
+};
+const PAGE_KEYS = ['mood','weight','check'];
+
+const PRAISE_MODULE = [
+  { emoji:'👍', title:'完成一项！', text:'小小的进步，也值得被看见' },
+  { emoji:'💪', title:'干得漂亮',   text:'又拿下一项，继续保持' },
+  { emoji:'✨', title:'这项搞定',   text:'每一步都算数' },
+  { emoji:'🌱', title:'小目标达成', text:'积少成多，你做得很好' },
+  { emoji:'👏', title:'不错哦',     text:'坚持就是最好的习惯' },
+  { emoji:'🍀', title:'打卡成功',   text:'给自己一点小小的奖励吧' },
+];
+
+const PRAISE_ALL = [
+  { emoji:'🎉', title:'全部完成！', text:'今天的你，闪闪发光 ✨' },
+  { emoji:'🏆', title:'今日满分',   text:'每一项都点亮，太厉害了' },
+  { emoji:'🎊', title:'圆满收官',   text:'给自己一个大大的拥抱' },
+  { emoji:'🌈', title:'全部达成',   text:'坚持的样子，真好看' },
+  { emoji:'⭐', title:'完美一天',   text:'每一格都为你亮起' },
+  { emoji:'🚀', title:'今日超神',   text:'全部目标一网打尽，了不起' },
+];
+
+const pad = n => String(n).padStart(2,'0');
+const dkey = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const TODAY = () => dkey(new Date());
+const nowTime = () => { const d = new Date(); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const uid = () => Math.random().toString(36).slice(2,9);
+const avg = a => a.reduce((s,v)=>s+v,0) / a.length;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const EPOCH = '1970-01-01';
+
+function defaultState(){
+  return {
+    unit: 'kg',
+    moods: [],
+    notes: [],
+    weights: [],
+    checks: {},
+    modules: [
+      { id:'m1', name:'喝水',  icon:'💧', target:8, createdDate: EPOCH, deletedDate: null },
+      { id:'m2', name:'吃水果', icon:'🍎', target:2, createdDate: EPOCH, deletedDate: null },
+      { id:'m3', name:'运动',  icon:'🏃', target:1, createdDate: EPOCH, deletedDate: null },
+    ],
+    pageOrder: ['mood','weight','check'],
+    celebrated: {},
+    celebratedMods: {},
+    timelineOrder: 'desc',
   };
 }
-function closeConfirmModal() {
-  const m = document.getElementById('confirmModal');
-  if (m) m.remove();
+let state;
+try {
+  const raw = JSON.parse(localStorage.getItem(STORE_KEY));
+  state = (raw && Array.isArray(raw.modules)) ? raw : defaultState();
+} catch(e){ state = defaultState(); }
+
+state.notes          = Array.isArray(state.notes) ? state.notes : [];
+state.celebrated     = (state.celebrated && typeof state.celebrated === 'object') ? state.celebrated : {};
+state.celebratedMods = (state.celebratedMods && typeof state.celebratedMods === 'object') ? state.celebratedMods : {};
+state.timelineOrder  = state.timelineOrder === 'asc' ? 'asc' : 'desc';
+if(!Array.isArray(state.pageOrder) ||
+   state.pageOrder.length !== PAGE_KEYS.length ||
+   !PAGE_KEYS.every(k => state.pageOrder.includes(k))){
+  state.pageOrder = PAGE_KEYS.slice();
 }
 
-// ==================== 路由 ====================
-const app = document.getElementById('app');
-function navigate(v) { state.activeView = v; render(); }
-function render() {
-  const titles = {
-    home: '孕周与宝宝状态',
-    counting: '数胎动',
-    bpd: 'B超记录',
-    history: '历史记录',
-    stats: '数据统计'
+state.modules.forEach(m => {
+  if(!m.createdDate) m.createdDate = EPOCH;
+  if(m.deletedDate === undefined) m.deletedDate = null;
+});
+
+const save = () => localStorage.setItem(STORE_KEY, JSON.stringify(state));
+
+const toDisplay = kg => state.unit === 'kg' ? kg : kg * 2;
+const fromDisplay = v => state.unit === 'kg' ? v : v / 2;
+const unitLabel = () => state.unit === 'kg' ? 'kg' : '斤';
+
+function getActiveModules(dateKey){
+  return state.modules.filter(m => {
+    if(m.createdDate && dateKey < m.createdDate) return false;
+    if(m.deletedDate && dateKey >= m.deletedDate) return false;
+    return true;
+  });
+}
+
+/* ============================================================
+   2. 农历工具
+   ============================================================ */
+const lunarCache = new Map();
+
+function getLunarInfo(y, m, d){
+  const key = `${y}-${pad(m)}-${pad(d)}`;
+  if(lunarCache.has(key)) return lunarCache.get(key);
+
+  const result = { lunarText:'', festival:'', term:'', isFestival:false, isTerm:false };
+  try {
+    if(typeof Solar === 'undefined') return result;
+
+    const solar = Solar.fromYmd(y, m, d);
+    const lunar = solar.getLunar();
+
+    let festivals = [];
+    try { festivals = lunar.getFestivals() || []; } catch(_) {}
+    try {
+      const solarFest = solar.getFestivals() || [];
+      festivals = festivals.concat(solarFest);
+    } catch(_) {}
+
+    const festival = festivals.length ? festivals[0] : '';
+
+    let term = '';
+    try { term = solar.getJieQi() || ''; } catch(_) {}
+
+    let lunarText = '';
+    if(festival){
+      lunarText = festival;
+      result.isFestival = true;
+    } else if(term){
+      lunarText = term;
+      result.isTerm = true;
+    } else {
+      try {
+        const dayInChinese = lunar.getDayInChinese();
+        lunarText = dayInChinese;
+        if(dayInChinese === '初一'){
+          lunarText = lunar.getMonthInChinese() + '月';
+        }
+      } catch(_) {}
+    }
+
+    result.lunarText = lunarText;
+    result.festival = festival;
+    result.term = term;
+  } catch(err){}
+
+  lunarCache.set(key, result);
+  return result;
+}
+
+/* ============================================================
+   3. 心情 SVG
+   ============================================================ */
+function heartPath(cx, cy, s){
+  const f = n => n.toFixed(2);
+  return `M${f(cx)} ${f(cy+0.8*s)}
+    C${f(cx-1.05*s)} ${f(cy-0.15*s)} ${f(cx-0.7*s)} ${f(cy-1.0*s)} ${f(cx)} ${f(cy-0.3*s)}
+    C${f(cx+0.7*s)} ${f(cy-1.0*s)} ${f(cx+1.05*s)} ${f(cy-0.15*s)} ${f(cx)} ${f(cy+0.8*s)} Z`;
+}
+function starPath(cx, cy, r){
+  const i = r * 0.42, f = n => n.toFixed(2);
+  return `M${f(cx)} ${f(cy-r)} L${f(cx+i)} ${f(cy-i)} L${f(cx+r)} ${f(cy)}
+          L${f(cx+i)} ${f(cy+i)} L${f(cx)} ${f(cy+r)} L${f(cx-i)} ${f(cy+i)}
+          L${f(cx-r)} ${f(cy)} L${f(cx-i)} ${f(cy-i)} Z`;
+}
+
+function moodSVG(key, size){
+  const open = `<svg viewBox="0 0 40 40" width="${size}" height="${size}" fill="none"
+    stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">`;
+  const face  = `<circle cx="20" cy="20" r="16.5"/>`;
+  const blush = `<ellipse cx="10.8" cy="24.8" rx="2.9" ry="1.9" fill="currentColor" stroke="none" opacity=".22"/>
+                 <ellipse cx="29.2" cy="24.8" rx="2.9" ry="1.9" fill="currentColor" stroke="none" opacity=".22"/>`;
+  let body = '';
+  switch(key){
+    case 'joy':
+      body = `<path d="M10.5 15.5 Q14.5 10.8 18.5 15.5"/>
+              <path d="M21.5 15.5 Q25.5 10.8 29.5 15.5"/>
+              <path d="M12.5 23 Q20 30.8 27.5 23"/>`;
+      break;
+    case 'excited':
+      body = `<path d="${starPath(14.5,15.5,4.3)}" fill="currentColor" stroke="none"/>
+              <path d="${starPath(25.5,15.5,4.3)}" fill="currentColor" stroke="none"/>
+              <path d="M12.8 22.5 Q20 31.6 27.2 22.5 Q20 25.9 12.8 22.5 Z"
+                    fill="currentColor" stroke="none"/>`;
+      break;
+    case 'heart':
+      body = `<path d="${heartPath(14.5,16,4.5)}" fill="currentColor" stroke="none"/>
+              <path d="${heartPath(25.5,16,4.5)}" fill="currentColor" stroke="none"/>
+              <path d="M14 25.2 Q20 29.6 26 25.2"/>`;
+      break;
+    case 'calm':
+      body = `<circle cx="14.5" cy="16" r="1.8" fill="currentColor" stroke="none"/>
+              <circle cx="25.5" cy="16" r="1.8" fill="currentColor" stroke="none"/>
+              <path d="M14.5 25 Q20 27.6 25.5 25"/>`;
+      break;
+    case 'meh':
+      body = `<circle cx="14.5" cy="16" r="1.8" fill="currentColor" stroke="none"/>
+              <circle cx="25.5" cy="16" r="1.8" fill="currentColor" stroke="none"/>
+              <path d="M14.5 25.8 H25.5"/>`;
+      break;
+    case 'sad':
+      body = `<circle cx="14.5" cy="16" r="1.8" fill="currentColor" stroke="none"/>
+              <circle cx="25.5" cy="16" r="1.8" fill="currentColor" stroke="none"/>
+              <path d="M13.5 27.6 Q20 21.4 26.5 27.6"/>
+              <path d="M27.4 20.5 Q28.6 23.4 27.4 24.3 Q26.2 23.4 27.4 20.5 Z"
+                    fill="currentColor" stroke="none" opacity=".55"/>`;
+      break;
+    case 'angry':
+      body = `<path d="M10.3 12.3 L17.6 15.6"/><path d="M29.7 12.3 L22.4 15.6"/>
+              <circle cx="14.5" cy="18.6" r="1.8" fill="currentColor" stroke="none"/>
+              <circle cx="25.5" cy="18.6" r="1.8" fill="currentColor" stroke="none"/>
+              <path d="M13.5 27.6 Q20 22 26.5 27.6"/>`;
+      break;
+  }
+  return open + face + blush + body + `</svg>`;
+}
+const moodColor = k => (MOODS.find(m=>m.key===k) || {}).color || '#98A2B3';
+const moodName  = k => (MOODS.find(m=>m.key===k) || {}).name  || '';
+
+/* ============================================================
+   4. 派生数据
+   ============================================================ */
+function aggregateMood(dateKey){
+  const list = state.moods.filter(x => x.date === dateKey);
+  if(!list.length) return null;
+  const counts = {};
+  list.forEach(x => counts[x.key] = (counts[x.key] || 0) + 1);
+  let best = list[0];
+  list.forEach(x => {
+    if(counts[x.key] > counts[best.key]) best = x;
+    else if(counts[x.key] === counts[best.key] && x.time >= best.time) best = x;
+  });
+  return best.key;
+}
+
+function dayProgress(dateKey){
+  const mods = getActiveModules(dateKey);
+  let total = 0, got = 0;
+  mods.forEach(m => {
+    total += m.target;
+    got += Math.min(state.checks[dateKey + '|' + m.id] || 0, m.target);
+  });
+  return total ? got / total : 0;
+}
+function isDayComplete(dateKey){
+  return getActiveModules(dateKey).length > 0 && dayProgress(dateKey) >= 1;
+}
+function weightStats(){
+  const sorted = [...state.weights].sort((a,b) => {
+    const ka = a.date + ' ' + a.time, kb = b.date + ' ' + b.time;
+    return ka > kb ? 1 : ka < kb ? -1 : 0;
+  });
+  if(!sorted.length) return { cur:null, last:null, total:null };
+  const cur = sorted[sorted.length - 1];
+  const prev = sorted.length > 1 ? sorted[sorted.length - 2] : null;
+  const first = sorted[0];
+  return {
+    cur: toDisplay(cur.kg),
+    last: prev ? toDisplay(cur.kg) - toDisplay(prev.kg) : null,
+    total: sorted.length > 1 ? toDisplay(cur.kg) - toDisplay(first.kg) : null,
   };
-  let html = `<div class="header">
-    <h1>${titles[state.activeView] || '胎动守护'}</h1>
-    <div class="sub">孕期监测 · 仅供参考</div>
-  </div><div class="content">`;
-  if (state.activeView === 'home') html += renderHome();
-  else if (state.activeView === 'counting') html += renderCountingPage();
-  else if (state.activeView === 'bpd') html += renderBpdPage();
-  else if (state.activeView === 'history') html += renderHistory();
-  else if (state.activeView === 'stats') html += renderStats();
-  html += '</div>';
-  if (!(state.activeView === 'counting' && state.currentSession)) {
-    html += `<div class="nav">
-      <div class="nav-item ${state.activeView==='home'?'active':''}" onclick="navigate('home')"><span class="icon">🏠</span>首页</div>
-      <div class="nav-item ${state.activeView==='counting'?'active':''}" onclick="navigate('counting')"><span class="icon">👶</span>胎动</div>
-      <div class="nav-item ${state.activeView==='bpd'?'active':''}" onclick="navigate('bpd')"><span class="icon">📊</span>B超</div>
-      <div class="nav-item ${state.activeView==='history'?'active':''}" onclick="navigate('history')"><span class="icon">📋</span>历史</div>
-      <div class="nav-item ${state.activeView==='stats'?'active':''}" onclick="navigate('stats')"><span class="icon">📈</span>统计</div>
-    </div>`;
-  }
-  app.innerHTML = html;
-  if (state.activeView === 'counting' && state.currentSession) startTimer(); else stopTimer();
 }
 
-// ==================== 首页 ====================
-function renderHome() {
-  let html = '';
-  const preg = calcPregnancy();
-  if (preg && !preg.error) {
-    html += `<div class="hero" onclick="openPregnancyModal()">
-      <div class="hero-edit">✏️ 修改</div>
-      <div class="hero-week">${preg.weeks}<span class="unit">周</span>${preg.days}<span class="unit">天</span></div>
-      <div class="hero-sub">${preg.trimester} · 距离预产期 ${preg.daysToDue} 天</div>
-      <div class="hero-bar"><div class="hero-progress" style="width:${preg.progress}%"></div></div>
-      <div class="hero-sub" style="margin-top:8px;font-size:11px;">预产期：${formatDate(preg.dueDate.getTime())}</div>
-    </div>`;
-    const baby = getBabyInfo(preg.weeks);
-    if (baby) {
-      const collapsed = state.babyCollapsed ? 'collapsed' : '';
-      html += `<div class="baby-card ${collapsed}">
-        <h4 onclick="toggleBaby()" style="cursor:pointer;">
-          <span>👶 ${preg.weeks}周宝宝状态</span>
-          <span class="arrow">▼</span>
-        </h4>
-        <div class="baby-body">
-          <div class="baby-row">
-            <div class="baby-item"><div class="num">${baby.length.replace(/约\s*/g, '')}</div><div class="lbl">身长</div></div>
-            <div class="baby-item"><div class="num">${baby.weight.replace(/约\s*/g, '')}</div><div class="lbl">体重</div></div>
-          </div>
-          <div class="baby-text"><strong>发育亮点：</strong>${baby.highlight}</div>
-          <div class="baby-text"><strong>胎动特点：</strong>${baby.movement}</div>
-        </div>
-      </div>`;
-    }
-    const records = state.profile.bpdRecords || [];
-    const lastBpd = records.length > 0 ? records.slice().sort((a, b) => b.date.localeCompare(a.date))[0] : null;
-    html += `<div class="grid-2">
-      <div class="action-card blue" onclick="navigate('bpd')">
-        <div class="icon">📊</div>
-        <div class="title">B超记录</div>
-        <div class="sub">${lastBpd ? formatDateCN(lastBpd.date) : '暂无记录'}</div>
-      </div>
-      <div class="action-card" onclick="navigate('counting')">
-        <div class="icon">👶</div>
-        <div class="title">数胎动</div>
-        <div class="sub">${getTodayCountingStatus()}</div>
-      </div>
-    </div>`;
-    if (state.currentSession) {
-      const s = state.currentSession;
-      html += `<div class="mode-card" style="border-left:4px solid var(--yellow);background:var(--yellow-light);" onclick="navigate('counting')">
-        <h3 style="color:#E65100;">⚠️ 有进行中的计数</h3>
-        <p>${periodLabel(s.periodLabel)} · 已进行 ${formatTime(Date.now()-s.startTime)}</p>
-      </div>`;
-    }
-  } else if (preg && preg.error) {
-    html += `<div class="hero" onclick="openPregnancyModal()">
-      <div class="hero-week" style="font-size:22px;">日期有误</div>
-      <div class="hero-sub">${preg.error}</div>
-      <div class="hero-sub" style="margin-top:12px;font-size:11px;color:var(--pink-dark);">点击重新设置 →</div>
-    </div>`;
-  } else {
-    html += `<div class="hero" onclick="openPregnancyModal()">
-      <div class="hero-week" style="font-size:24px;">设置孕周</div>
-      <div class="hero-sub">填写预产期或末次月经，自动计算孕周</div>
-      <div class="hero-sub" style="margin-top:12px;font-size:11px;color:var(--pink-dark);">点击设置 →</div>
-    </div>`;
-  }
-  html += `<div class="tip-card blue">
-    <strong>📌 胎动计数规则</strong><br>
-    · 5分钟内连续动作算1次胎动<br>
-    · 胎儿睡眠周期20-40分钟，安静属正常<br>
-    · 超过90分钟无胎动需警惕<br>
-    · 胎动明显减少、剧烈后消失，立即就医<br>
-    · 胎心正常不能排除胎动减少风险
-  </div>`;
-  return html;
-}
-function getTodayCountingStatus() {
-  const today = formatDate(Date.now());
-  const sessions = state.history.filter(x => formatDate(x.startTime) === today);
-  const count = sessions.length;
-  if (count === 0) return '今日未开始';
-  return `今日已完成 ${count}/3 时段`;
-}
-function toggleBaby() {
-  state.babyCollapsed = !state.babyCollapsed;
-  saveState();
-  render();
+function buildTimeline(dateKey){
+  const moods = state.moods.filter(x => x.date === dateKey);
+  const notes = (state.notes || []).filter(x => x.date === dateKey);
+
+  const items = [
+    ...moods.map(m => ({ type:'mood', id:m.id, time:m.time, key:m.key })),
+    ...notes.map(n => ({ type:'note', id:n.id, time:n.time, text:n.text })),
+  ];
+
+  const dir = state.timelineOrder === 'asc' ? 1 : -1;
+  items.sort((a,b) => {
+    if(a.time === b.time) return 0;
+    return a.time < b.time ? -dir : dir;
+  });
+  return items;
 }
 
-// ==================== 数胎动页面 ====================
-function renderCountingPage() {
-  const s = state.currentSession;
-  if (s) return renderCountingActive();
-  const today = formatDate(Date.now());
-  const todaySessions = state.history.filter(x => formatDate(x.startTime) === today);
-  const m = todaySessions.find(x => x.periodLabel === 'morning');
-  const n = todaySessions.find(x => x.periodLabel === 'noon');
-  const e = todaySessions.find(x => x.periodLabel === 'evening');
-  let html = `<div style="font-size:13px;color:var(--text-soft);text-align:center;margin-bottom:16px;line-height:1.6;">
-    早、中、晚各计数1小时<br>三次相加×4，≥30次为正常
+/* ============================================================
+   5. 视图状态
+   ============================================================ */
+const _now = new Date();
+let view = {
+  name: 'calendar',
+  calMode: 'month',
+  year: _now.getFullYear(),
+  month: _now.getMonth(),
+  date: TODAY(),
+  page: 'mood',
+  wDate: TODAY(),
+  showAddMod: false,
+  newIcon: '💧',
+  statRange: 'week',
+};
+
+/* ============================================================
+   6. 弹窗系统
+   ============================================================ */
+const modalRoot = document.getElementById('modalRoot');
+
+function openModal(html){
+  modalRoot.innerHTML = `<div class="modal-mask" id="modalMask">
+    <div class="modal-card">${html}</div>
   </div>`;
-  if (m && n && e) {
-    const est = (m.effectiveCount + n.effectiveCount + e.effectiveCount) * 4;
-    let color = 'var(--green)', text = '正常';
-    if (est < 20) { color = 'var(--red)'; text = '异常，请立即就医'; }
-    else if (est < 30) { color = 'var(--yellow)'; text = '需关注，请咨询医生'; }
-    html += `<div class="mode-card" style="text-align:center;border-color:var(--pink-border);">
-      <div style="font-size:12px;color:var(--text-soft);">今日12小时估算值</div>
-      <div style="font-size:40px;font-weight:700;color:${color};font-variant-numeric:tabular-nums;">${est}</div>
-      <div style="font-size:13px;color:${color};">${text}</div>
-    </div>`;
-  }
-  const renderSessionCard = (label, icon, session, period, isBlue) => {
-    if (session) {
-      return `<div class="mode-card" style="border-left:4px solid var(--green);background:var(--green-light);cursor:default;border-color:#C8E6C9;">
-        <h3 style="color:#2E7D32;">${icon} ${label} ✅</h3>
-        <p style="color:#2E7D32;">已完成 · 有效胎动 ${session.effectiveCount} 次</p>
-      </div>`;
-    }
-    return `<div class="mode-card ${isBlue ? 'blue' : ''}" onclick="startSession('B','${period}')">
-      <h3>${icon} ${label}</h3>
-      <p>点击开始 1 小时计数</p>
-    </div>`;
-  };
-  html += renderSessionCard('早间', '🌅', m, 'morning', false);
-  html += renderSessionCard('午间', '☀️', n, 'noon', true);
-  html += renderSessionCard('晚间', '🌙', e, 'evening', false);
-  html += `<div class="tip-card">
-    <strong>📌 计数规则提醒</strong><br>
-    · 5分钟内连续动作算1次胎动<br>
-    · 胎儿睡眠周期20-40分钟，安静属正常<br>
-    · 超过90分钟无胎动需警惕<br>
-    · 胎动明显减少、剧烈后消失，立即就医
-  </div>`;
-  return html;
+  requestAnimationFrame(() => {
+    const m = document.getElementById('modalMask');
+    if(m) m.classList.add('show');
+  });
 }
-function renderCountingActive() {
-  const s = state.currentSession;
-  const target = 3;
-  const reached = s.effectiveCount >= target;
-  let html = '';
-  if (s.warningLevel && s.warningLevel !== 'none') html += `<div class="warning-banner warning-${s.warningLevel}">${s.warningMessage || ''}</div>`;
-  if (reached && (!s.warningLevel || s.warningLevel === 'none')) html += `<div class="warning-banner warning-green">✅ 本时段已达到${target}次，可继续观察或结束</div>`;
-  html += `<div class="timer" id="timer">--:--:--</div>`;
-  html += `<div class="stats-row">
-    <div class="stat-item"><div class="value" id="effCount">${s.effectiveCount}</div><div class="label">有效胎动</div></div>
-    <div class="stat-item"><div class="value" id="rawCount" style="color:var(--text-soft);">${s.rawCount}</div><div class="label">原始点击</div></div>
-    <div class="stat-item"><div class="value" id="hiccupCount" style="color:var(--text-soft);">${s.hiccupCount}</div><div class="label">打嗝</div></div>
-  </div>`;
-  html += `<div class="big-button" onclick="onMovementTap()"><div class="tap-icon">👆</div><div class="label">胎动 +1</div></div>`;
-  html += `<div class="btn-row">
-    <button class="btn btn-outline-blue" onclick="onHiccupTap()">💧 打嗝</button>
-    <button class="btn btn-outline" onclick="onUndoTap()">↩️ 撤销</button>
-  </div>`;
-  html += `<button class="btn btn-primary btn-block" style="margin-top:16px;padding:16px;font-size:16px;" onclick="confirmFinish()">结束计数</button>`;
-  html += `<button class="btn btn-outline btn-block" style="margin-top:8px;margin-bottom:24px;" onclick="abortSession()">放弃本次</button>`;
-  return html;
+function closeModal(){
+  const m = document.getElementById('modalMask');
+  if(!m){ modalRoot.innerHTML = ''; return; }
+  m.classList.remove('show');
+  setTimeout(() => { modalRoot.innerHTML = ''; }, 220);
 }
 
-// ==================== B超页面 ====================
-function renderBpdPage() {
-  const preg = calcPregnancy();
-  const records = (state.profile.bpdRecords || []).slice().sort((a, b) => b.date.localeCompare(a.date));
-  let html = '';
-  html += `<button class="btn btn-blue btn-block" style="margin-bottom:16px;padding:14px;font-size:16px;" onclick="openBpdForm()">➕ 录入新B超数据</button>`;
-  if (!preg || preg.error) {
-    html += `<div class="warning-banner warning-yellow">请先在首页设置孕周，才能进行参考值对比</div>`;
-  }
-  if (records.length === 0) {
-    html += `<div class="empty"><div class="icon">📊</div><div>暂无B超记录</div>
-      <div style="font-size:13px;margin-top:8px;">点击上方按钮录入第一条记录</div></div>`;
-    return html;
-  }
-  html += `<div class="section-title">
-    <span>共 ${records.length} 条记录</span>
-    <span style="font-size:13px;color:var(--red);cursor:pointer;" onclick="clearAllBpd()">🗑️ 清空全部</span>
-  </div>`;
-  for (const r of records) html += renderBpdRecord(r, preg);
-  return html;
-}
-function renderBpdRecord(r, preg) {
-  const refWeeks = r.weeks || (preg && !preg.error ? preg.weeks : null);
-  const assess = refWeeks ? assessBabyStatus(refWeeks, r.bpd, r.hc, r.ac, r.fl, r.efw) : null;
-  const statusText = !assess ? '未评估' :
-    assess.overall === 'normal' ? '发育正常' :
-    assess.overall === 'small' ? '偏小，需关注' :
-    assess.overall === 'large' ? '偏大，需关注' : '部分指标异常';
-  const statusClass = !assess ? '' :
-    assess.overall === 'normal' ? 'status-normal' :
-    assess.overall === 'small' ? 'status-small' : 'status-large';
-  const afAssess = assessAmniotic(r.af);
-  const fhrAssess = assessFhr(r.fhr);
-  let html = `<div class="bpd-record">
-    <div class="head">
-      <div>
-        <div class="date">📅 ${formatDateCN(r.date)}</div>
-        <div class="week">${r.weeks ? `检查时孕 ${r.weeks} 周` : '未记录孕周'}</div>
-      </div>
+function openWeightEditModal(id){
+  const rec = state.weights.find(w => w.id === id);
+  if(!rec) return;
+  const u = unitLabel();
+  openModal(`
+    <div class="modal-title">修改体重</div>
+    <div class="w-form" style="margin-top:18px">
+      <input class="w-input" id="editWInput" type="number" step="0.1" inputmode="decimal"
+             value="${toDisplay(rec.kg).toFixed(1)}">
+      <span class="w-unit">${u}</span>
     </div>
-    <div class="data-grid">
-      ${r.bpd ? `<div class="data-item"><div class="val">${r.bpd}</div><div class="lbl">双顶径 BPD(mm)</div></div>` : ''}
-      ${r.hc ? `<div class="data-item"><div class="val">${r.hc}</div><div class="lbl">头围 HC(mm)</div></div>` : ''}
-      ${r.fl ? `<div class="data-item"><div class="val">${r.fl}</div><div class="lbl">股骨长 FL(mm)</div></div>` : ''}
-      ${r.ac ? `<div class="data-item"><div class="val">${r.ac}</div><div class="lbl">腹围 AC(mm)</div></div>` : ''}
-      ${r.fhr ? `<div class="data-item"><div class="val">${r.fhr}</div><div class="lbl">胎心(次/分)</div></div>` : ''}
-      ${r.af ? `<div class="data-item"><div class="val">${r.af}</div><div class="lbl">羊水深度(cm)</div></div>` : ''}
+    <div class="modal-actions">
+      <button class="btn ghost" data-act="close-modal">取消</button>
+      <button class="btn" data-act="confirm-edit-weight" data-id="${id}">保存</button>
     </div>
-    ${r.efw ? `<div class="efw-row"><div class="num">${r.efw} g</div><div class="lbl">估算胎儿体重</div></div>` : ''}
-    ${afAssess ? `<div class="status-box ${afAssess.status==='normal'?'status-normal':afAssess.status==='low'?'status-small':'status-large'}" style="margin-bottom:8px;">
-      <strong>羊水深度：</strong>${r.af} cm · ${afAssess.text}（参考 3-8 cm 正常）
-    </div>` : ''}
-    ${fhrAssess ? `<div class="status-box ${fhrAssess.status==='normal'?'status-normal':fhrAssess.status==='low'?'status-small':'status-large'}" style="margin-bottom:8px;">
-      <strong>胎心：</strong>${r.fhr} 次/分 · ${fhrAssess.text}（参考 110-160 次/分 正常）
-    </div>` : ''}
-    ${assess ? `<div class="status-box ${statusClass}">
-      <strong>综合评估：${statusText}</strong><br>
-      ${assess.issues.length > 0 ? assess.issues.map(i => `· ${i.param} ${i.status === 'small' ? '偏小' : '偏大'}`).join('<br>') : '各项参数均在正常范围内'}
-    </div>` : ''}
-    <div class="actions-row">
-      <span class="delete-btn" onclick="deleteBpdRecord('${r.date}')">🗑️ 删除</span>
+  `);
+  setTimeout(() => {
+    const el = document.getElementById('editWInput');
+    if(el){ el.focus(); el.select(); }
+  }, 250);
+}
+
+function openWeightDeleteModal(id){
+  openModal(`
+    <div class="praise">
+      <div class="praise-emoji" style="animation:none">🗑️</div>
+      <h3 style="font-size:17px">删除这条记录？</h3>
+      <p>删除后将无法恢复</p>
     </div>
-  </div>`;
-  return html;
-}
-function openBpdForm() {
-  const today = formatDate(Date.now());
-  document.body.insertAdjacentHTML('beforeend',
-    `<div class="modal-overlay" id="bpdModal"><div class="modal">
-      <h2>录入B超数据</h2>
-      <p style="font-size:13px;color:var(--text-soft);">输入B超单上的数值</p>
-      <div class="form-group">
-        <label>B超检查日期 *</label>
-        <input type="date" id="inputDate" value="${today}">
-        <div class="form-hint">用于计算检查时的孕周</div>
-      </div>
-      <div class="form-row">
-        <div class="form-group"><label>双顶径 BPD (mm)</label><input type="number" id="inputBpd" placeholder="如 80"></div>
-        <div class="form-group"><label>头围 HC (mm)</label><input type="number" id="inputHc" placeholder="如 290"></div>
-      </div>
-      <div class="form-row">
-        <div class="form-group"><label>股骨长 FL (mm)</label><input type="number" id="inputFl" placeholder="如 60"></div>
-        <div class="form-group"><label>腹围 AC (mm)</label><input type="number" id="inputAc" placeholder="如 270"></div>
-      </div>
-      <div class="form-row">
-        <div class="form-group"><label>胎心 (次/分)</label><input type="number" id="inputFhr" placeholder="如 145"></div>
-        <div class="form-group"><label>羊水深度 (cm)</label><input type="number" step="0.1" id="inputAf" placeholder="如 4.5"></div>
-      </div>
-      <div class="form-hint" style="margin-bottom:12px;">只需填写B超单上有的项目，留空则不参与评估</div>
-      <div class="modal-actions">
-        <button class="btn btn-outline" onclick="closeBpdModal()">取消</button>
-        <button class="btn btn-blue" onclick="saveBpdRecord()">保存</button>
-      </div>
-    </div></div>`);
-}
-function saveBpdRecord() {
-  const date = document.getElementById('inputDate').value;
-  if (!date) { alert('请选择B超检查日期'); return; }
-  const bpd = parseFloat(document.getElementById('inputBpd').value) || null;
-  const hc = parseFloat(document.getElementById('inputHc').value) || null;
-  const fl = parseFloat(document.getElementById('inputFl').value) || null;
-  const ac = parseFloat(document.getElementById('inputAc').value) || null;
-  const fhr = parseFloat(document.getElementById('inputFhr').value) || null;
-  const af = parseFloat(document.getElementById('inputAf').value) || null;
-  if (!bpd && !hc && !fl && !ac && !fhr && !af) { alert('请至少填写一项数据'); return; }
-  const weeks = calcWeeksAtDate(date);
-  let efw = null;
-  if (ac && fl) efw = estimateEFW(bpd || 0, ac / 10, fl / 10);
-  const existing = state.profile.bpdRecords.findIndex(r => r.date === date);
-  const record = { date, weeks, bpd, hc, fl, ac, fhr, af, efw };
-  if (existing >= 0) state.profile.bpdRecords[existing] = record;
-  else state.profile.bpdRecords.push(record);
-  saveState();
-  closeBpdModal();
-  render();
-  showBpdResult(record, weeks);
-}
-function showBpdResult(r, weeks) {
-  const assess = weeks ? assessBabyStatus(weeks, r.bpd, r.hc, r.ac, r.fl, r.efw) : null;
-  const afAssess = assessAmniotic(r.af);
-  const fhrAssess = assessFhr(r.fhr);
-  const statusText = !assess ? '未评估（缺少孕周信息）' :
-    assess.overall === 'normal' ? '发育正常' :
-    assess.overall === 'small' ? '偏小，需关注' :
-    assess.overall === 'large' ? '偏大，需关注' : '部分指标异常';
-  const statusClass = !assess ? '' :
-    assess.overall === 'normal' ? 'status-normal' :
-    assess.overall === 'small' ? 'status-small' : 'status-large';
-  let issuesHtml = '';
-  if (assess && assess.issues.length > 0) {
-    issuesHtml = assess.issues.map(i => `· ${i.param} ${i.status === 'small' ? '偏小' : '偏大'}（${i.val}${i.param.includes('体重') ? 'g' : 'mm'}，参考 ${Math.round(i.ref[0])}-${Math.round(i.ref[1])}${i.param.includes('体重') ? 'g' : 'mm'}）`).join('<br>');
-  } else if (assess) issuesHtml = '各项参数均在正常范围内';
-  document.body.insertAdjacentHTML('beforeend',
-    `<div class="modal-overlay" id="resultModal"><div class="modal">
-      <h2>📊 评估结果</h2>
-      ${r.efw ? `<div class="efw-row" style="margin-bottom:16px;"><div class="num" style="font-size:32px;">${r.efw} g</div><div class="lbl">估算胎儿体重</div></div>` : ''}
-      ${assess ? `<div class="status-box ${statusClass}" style="margin-bottom:12px;"><strong>${statusText}</strong><br>${issuesHtml}</div>` : ''}
-      ${afAssess ? `<div class="status-box ${afAssess.status==='normal'?'status-normal':afAssess.status==='low'?'status-small':'status-large'}" style="margin-bottom:8px;"><strong>羊水深度：</strong>${r.af} cm · ${afAssess.text}</div>` : ''}
-      ${fhrAssess ? `<div class="status-box ${fhrAssess.status==='normal'?'status-normal':fhrAssess.status==='low'?'status-small':'status-large'}" style="margin-bottom:12px;"><strong>胎心：</strong>${r.fhr} 次/分 · ${fhrAssess.text}</div>` : ''}
-      <div style="font-size:12px;color:var(--text-light);line-height:1.6;background:var(--pink-light);padding:12px;border-radius:var(--radius);">
-        ⚠️ 本评估基于孕周参考值范围，仅供参考。具体以产检医生判断为准。
-      </div>
-      <button class="btn btn-blue btn-block" style="margin-top:16px;" onclick="closeModal()">完成</button>
-    </div></div>`);
-}
-function deleteBpdRecord(date) {
-  showConfirmModal('删除这条B超记录？', '删除后不可恢复。', '删除', () => {
-    state.profile.bpdRecords = state.profile.bpdRecords.filter(r => r.date !== date);
-    saveState();
-    render();
-  }, true);
-}
-function clearAllBpd() {
-  if (state.profile.bpdRecords.length === 0) { alert('暂无记录'); return; }
-  showConfirmModal('清空全部B超记录？', `共 ${state.profile.bpdRecords.length} 条记录，清空后不可恢复。`, '继续', () => {
-    showConfirmModal('再次确认', '清空后所有B超记录将永久丢失，确定继续？', '确定清空', () => {
-      state.profile.bpdRecords = [];
-      saveState();
-      render();
-    }, true);
-  }, true);
-}
-function closeBpdModal() { const m = document.getElementById('bpdModal'); if (m) m.remove(); }
-function closeModal() { const m = document.getElementById('resultModal'); if (m) m.remove(); }
-
-// ==================== 孕周设置弹窗 ====================
-function openPregnancyModal() {
-  const p = state.profile;
-  document.body.insertAdjacentHTML('beforeend',
-    `<div class="modal-overlay" id="pregModal"><div class="modal">
-      <h2>设置孕周</h2>
-      <p style="font-size:13px;color:var(--text-soft);">任选一种方式填写，系统自动计算孕周</p>
-      <div class="form-group"><label>方式一：预产期</label><input type="date" id="inputDueDate" value="${p.dueDate || ''}"><div class="form-hint">医生告知的预产期</div></div>
-      <div class="form-group"><label>方式二：末次月经第一天</label><input type="date" id="inputLmpDate" value="${p.lmpDate || ''}"><div class="form-hint">预产期 = 该日期 + 280天</div></div>
-      <div class="modal-actions">
-        <button class="btn btn-outline" onclick="clearPregnancy()">清除</button>
-        <button class="btn btn-primary" onclick="savePregnancy()">保存</button>
-      </div>
-      <button class="btn btn-outline btn-block" style="margin-top:12px;" onclick="closePregModal()">取消</button>
-    </div></div>`);
-}
-function savePregnancy() {
-  const due = document.getElementById('inputDueDate').value;
-  const lmp = document.getElementById('inputLmpDate').value;
-  if (!due && !lmp) { alert('请至少填写一项'); return; }
-  state.profile.dueDate = due || null;
-  state.profile.lmpDate = lmp || null;
-  saveState();
-  closePregModal();
-  render();
-}
-function clearPregnancy() {
-  showConfirmModal('清除孕周信息？', '清除后需要重新设置。', '清除', () => {
-    state.profile.dueDate = null;
-    state.profile.lmpDate = null;
-    saveState();
-    closePregModal();
-    render();
-  }, true);
-}
-function closePregModal() { const m = document.getElementById('pregModal'); if (m) m.remove(); }
-
-// ==================== 历史页 ====================
-function renderHistory() {
-  const list = state.history.slice().reverse();
-  if (list.length === 0) {
-    return `<div class="empty"><div class="icon">📋</div><div>暂无历史记录</div><div style="font-size:13px;margin-top:8px;">完成一次计数后，记录会显示在这里</div></div>`;
-  }
-  let html = `<div class="filter-row">
-    <div class="filter-btn ${state.filter==='all'?'active':''}" onclick="setFilter('all')">全部</div>
-    <div class="filter-btn ${state.filter==='morning'?'active':''}" onclick="setFilter('morning')">早间</div>
-    <div class="filter-btn ${state.filter==='noon'?'active':''}" onclick="setFilter('noon')">午间</div>
-    <div class="filter-btn ${state.filter==='evening'?'active':''}" onclick="setFilter('evening')">晚间</div>
-    <div class="filter-btn ${state.filter==='red'?'active':''}" onclick="setFilter('red')">异常</div>
-  </div>`;
-  html += `<div style="display:flex;justify-content:flex-end;margin-bottom:12px;"><button class="btn btn-danger" style="padding:6px 16px;font-size:13px;" onclick="clearAllHistory()">🗑️ 清空全部</button></div>`;
-  let filtered = list;
-  if (['morning', 'noon', 'evening'].includes(state.filter)) filtered = list.filter(s => s.periodLabel === state.filter);
-  else if (state.filter === 'red') filtered = list.filter(s => s.warningLevel === 'red');
-  if (filtered.length === 0) return html + '<div class="empty"><div class="icon">🔍</div><div>没有符合条件的记录</div></div>';
-  for (const s of filtered) {
-    const cls = s.warningLevel === 'red' ? 'red' : s.warningLevel === 'yellow' ? 'yellow' : '';
-    const statusText = s.warningLevel === 'red' ? '异常' : s.warningLevel === 'yellow' ? '关注' : '正常';
-    const modeText = `12小时法·${periodLabel(s.periodLabel)}`;
-    const expanded = !!state.expandedIds[s.id];
-    const events = s.events || [];
-    const taggedEvents = computeEventTags(events);
-    html += `<div class="history-item ${cls}">
-      <div class="head"><span class="date">${formatDateTime(s.startTime)}</span><span class="status">${statusText}</span></div>
-      <div class="info"><strong>${modeText}</strong> · 有效 ${s.effectiveCount} 次${s.rawCount !== s.effectiveCount ? `（原始点击 ${s.rawCount}）` : ''}${s.hiccupCount > 0 ? ` · 打嗝 ${s.hiccupCount}` : ''}</div>
-      <div class="actions-row">
-        <span class="toggle-btn" onclick="toggleDetail('${s.id}')">${expanded ? '▲ 收起详情' : `▼ 查看详情（${events.length}次点击）`}</span>
-        <span class="delete-btn" onclick="deleteHistory('${s.id}')">🗑️ 删除</span>
-      </div>`;
-    if (expanded) {
-      if (events.length === 0) html += `<div class="detail-list"><div style="text-align:center;color:var(--text-light);font-size:13px;padding:12px;">本次没有记录到点击</div></div>`;
-      else {
-        html += `<div class="detail-list">`;
-        taggedEvents.forEach((e, idx) => {
-          let tagText = '有效', tagCls = 'effective';
-          if (e.tag === 'merged') { tagText = '合并'; tagCls = 'merged'; }
-          else if (e.tag === 'hiccup') { tagText = '打嗝'; tagCls = 'hiccup'; }
-          html += `<div class="detail-item"><span class="time">${idx+1}. ${formatTimeOnly(e.time)}</span><span class="tag ${tagCls}">${tagText}</span></div>`;
-        });
-        html += `</div>`;
-      }
-    }
-    html += `</div>`;
-  }
-  return html;
-}
-function setFilter(f) { state.filter = f; render(); }
-function toggleDetail(id) { state.expandedIds[id] = !state.expandedIds[id]; render(); }
-function deleteHistory(id) {
-  showConfirmModal('删除这条记录？', '删除后不可恢复。', '删除', () => {
-    state.history = state.history.filter(s => s.id !== id);
-    delete state.expandedIds[id];
-    saveState();
-    render();
-  }, true);
-}
-function clearAllHistory() {
-  if (state.history.length === 0) { alert('暂无记录可清空'); return; }
-  showConfirmModal('清空全部记录？', `共 ${state.history.length} 条记录，清空后不可恢复。`, '继续', () => {
-    showConfirmModal('再次确认', '清空后所有历史记录将永久丢失，确定继续？', '确定清空', () => {
-      state.history = [];
-      state.expandedIds = {};
-      saveState();
-      render();
-    }, true);
-  }, true);
+    <div class="modal-actions">
+      <button class="btn ghost" data-act="close-modal">取消</button>
+      <button class="btn danger" data-act="confirm-del-weight" data-id="${id}">删除</button>
+    </div>
+  `);
 }
 
-// ==================== 统计页 ====================
-function renderStats() {
-  const all = state.history;
-  if (all.length === 0) {
-    return `<div class="empty"><div class="icon">📈</div><div>暂无数据</div><div style="font-size:13px;margin-top:8px;">完成几次计数后，这里会显示趋势</div></div>`;
-  }
-  const total = all.length;
-  const redCount = all.filter(s => s.warningLevel === 'red').length;
-  const yellowCount = all.filter(s => s.warningLevel === 'yellow').length;
-  const normalCount = total - redCount - yellowCount;
-  const last7 = [];
-  for (let i = 6; i >= 0; i--) {
-    const ds = new Date(); ds.setHours(0,0,0,0); ds.setDate(ds.getDate() - i);
-    const de = ds.getTime() + 86400000;
-    const daySessions = all.filter(s => s.startTime >= ds.getTime() && s.startTime < de);
-    const m = daySessions.find(s => s.periodLabel === 'morning');
-    const n = daySessions.find(s => s.periodLabel === 'noon');
-    const e = daySessions.find(s => s.periodLabel === 'evening');
-    let est = null;
-    if (m && n && e) est = (m.effectiveCount + n.effectiveCount + e.effectiveCount) * 4;
-    last7.push({ date: ds, est });
-  }
-  const maxEst = Math.max(...last7.map(d => d.est || 0), 40);
-  let html = `<div class="stats-card"><h3>📈 总览</h3>
-    <div class="stats-row" style="margin:0;box-shadow:none;border:none;background:transparent;padding:0;">
-      <div class="stat-item"><div class="value">${total}</div><div class="label">总次数</div></div>
-      <div class="stat-item"><div class="value" style="color:var(--green);">${normalCount}</div><div class="label">正常</div></div>
-      <div class="stat-item"><div class="value" style="color:var(--yellow);">${yellowCount}</div><div class="label">关注</div></div>
-      <div class="stat-item"><div class="value" style="color:var(--red);">${redCount}</div><div class="label">异常</div></div>
-    </div></div>`;
-  html += `<div class="stats-card blue"><h3>📊 近7天12小时估算值</h3><div class="bar-chart">`;
-  for (const d of last7) {
-    const h = d.est ? Math.max(8, (d.est / maxEst) * 100) : 4;
-    let bgCls = '';
-    let bg = '';
-    if (d.est !== null && d.est < 20) bg = 'linear-gradient(180deg, #EF9A9A 0%, #EF5350 100%)';
-    else if (d.est !== null && d.est < 30) bg = 'linear-gradient(180deg, #FFE082 0%, #FFB300 100%)';
-    else bgCls = 'blue';
-    html += `<div class="bar-item"><div class="bar ${bgCls}" style="height:${h}%;${bg ? 'background:' + bg + ';' : ''}opacity:${d.est?1:0.2};"></div><div class="bar-label">${d.date.getMonth()+1}/${d.date.getDate()}${d.est?`<br>${d.est}`:''}</div></div>`;
-  }
-  html += `</div><div style="font-size:12px;color:var(--text-light);margin-top:8px;text-align:center;">≥30 正常 · 20-29 关注 · &lt;20 异常</div></div>`;
-  const today = formatDate(Date.now());
-  const todayB = all.filter(s => formatDate(s.startTime) === today);
-  const m = todayB.find(s => s.periodLabel === 'morning');
-  const n = todayB.find(s => s.periodLabel === 'noon');
-  const e = todayB.find(s => s.periodLabel === 'evening');
-  if (m || n || e) {
-    html += `<div class="stats-card"><h3>🕐 今日12小时法</h3>
-      <div style="display:flex;justify-content:space-around;text-align:center;">
-        <div><div style="font-size:22px;font-weight:700;color:${m?'var(--pink-dark)':'#ccc'};">${m?m.effectiveCount:'-'}</div><div style="font-size:12px;color:var(--text-light);">早间</div></div>
-        <div><div style="font-size:22px;font-weight:700;color:${n?'var(--blue-dark)':'#ccc'};">${n?n.effectiveCount:'-'}</div><div style="font-size:12px;color:var(--text-light);">午间</div></div>
-        <div><div style="font-size:22px;font-weight:700;color:${e?'var(--pink-dark)':'#ccc'};">${e?e.effectiveCount:'-'}</div><div style="font-size:12px;color:var(--text-light);">晚间</div></div>
-      </div>`;
-    if (m && n && e) {
-      const est = (m.effectiveCount + n.effectiveCount + e.effectiveCount) * 4;
-      let color = 'var(--green)', text = '正常';
-      if (est < 20) { color = 'var(--red)'; text = '异常，请立即就医'; }
-      else if (est < 30) { color = 'var(--yellow)'; text = '需关注，请咨询医生'; }
-      html += `<div style="margin-top:16px;padding:12px;background:var(--pink-light);border-radius:var(--radius);text-align:center;">
-        <div style="font-size:12px;color:var(--text-soft);">12小时估算值</div>
-        <div style="font-size:28px;font-weight:700;color:${color};font-variant-numeric:tabular-nums;">${est}</div>
-        <div style="font-size:13px;color:${color};">${text}</div></div>`;
-    }
-    html += `</div>`;
-  }
-  return html;
+function openDeleteModuleModal(mid){
+  const m = state.modules.find(x => x.id === mid);
+  if(!m) return;
+  openModal(`
+    <div class="praise">
+      <div class="praise-emoji" style="animation:none">🗂️</div>
+      <h3 style="font-size:17px">删除「${esc(m.name)}」？</h3>
+      <p style="margin-top:8px;line-height:1.75">
+        删除后，这个模块将从<b>当前日期起</b>不再显示。<br>
+        之前所有日期的打卡记录会<b>完整保留</b>。
+      </p>
+    </div>
+    <div class="modal-actions">
+      <button class="btn ghost" data-act="close-modal">取消</button>
+      <button class="btn danger" data-act="confirm-del-mod" data-id="${mid}">删除</button>
+    </div>
+  `);
 }
 
-// ==================== 会话操作 ====================
-function startSession(mode, periodLabel) {
-  if (state.currentSession) {
-    showConfirmModal('已有进行中的计数', '是否放弃并开始新的？', '确定', () => {
-      doStartSession(mode, periodLabel);
-    });
+function openPraiseModal(kind){
+  const isAll = kind === 'all';
+  const pool = isAll ? PRAISE_ALL : PRAISE_MODULE;
+  const p = pool[Math.floor(Math.random() * pool.length)];
+
+  openModal(`
+    <div class="praise ${isAll ? 'praise-strong' : ''}">
+      <div class="praise-emoji">${p.emoji}</div>
+      <h3>${p.title}</h3>
+      <p>${p.text}</p>
+      ${isAll ? '<div class="stars">✨ ⭐ ✨ ⭐ ✨</div>' : ''}
+      <button class="btn" data-act="close-modal"
+              style="width:100%;margin-top:${isAll ? '16px' : '14px'}">${isAll ? '收下夸奖' : '好'}</button>
+    </div>
+  `);
+}
+
+modalRoot.addEventListener('click', e => {
+  if(e.target.id === 'modalMask'){ closeModal(); return; }
+  const el = e.target.closest('[data-act]');
+  if(!el) return;
+  const act = el.dataset.act;
+
+  if(act === 'close-modal'){ closeModal(); return; }
+
+  if(act === 'confirm-edit-weight'){
+    const input = document.getElementById('editWInput');
+    const raw = parseFloat(input && input.value);
+    if(!isFinite(raw) || raw <= 0){ if(input){ input.focus(); input.select(); } return; }
+    const kg = Math.round(fromDisplay(raw) * 10) / 10;
+    const rec = state.weights.find(w => w.id === el.dataset.id);
+    if(rec) rec.kg = kg;
+    save(); closeModal(); render();
     return;
   }
-  doStartSession(mode, periodLabel);
-}
-function doStartSession(mode, periodLabel) {
-  const now = Date.now();
-  state.currentSession = {
-    id: 's_' + now, mode, periodLabel: periodLabel || null,
-    startTime: now, plannedEndTime: now + 60 * 60 * 1000,
-    plannedDurationMin: 60,
-    effectiveCount: 0, rawCount: 0, hiccupCount: 0, events: [],
-    lastEffectiveTime: null, lastAnyMovementTime: null,
-    warningLevel: 'none', warningMessage: null,
-    silenceWarned: false, reachTargetWarned: false, status: 'active'
-  };
-  saveState();
-  navigate('counting');
-}
-function onMovementTap() {
-  const s = state.currentSession;
-  if (!s) return;
-  if (navigator.vibrate) navigator.vibrate(30);
-  const now = Date.now();
-  s.events.push({ time: now, isHiccup: false });
-  const { effective, lastEffectiveTime } = recomputeEffectiveCount(s.events);
-  s.effectiveCount = effective; s.lastEffectiveTime = lastEffectiveTime; s.lastAnyMovementTime = now;
-  s.rawCount = s.events.filter(e => !e.isHiccup).length;
-  s.hiccupCount = s.events.filter(e => e.isHiccup).length;
-  if (s.warningLevel === 'red' && s.warningMessage && s.warningMessage.includes('90分钟')) { s.warningLevel = 'none'; s.warningMessage = null; s.silenceWarned = false; }
-  if (s.effectiveCount === 3 && !s.reachTargetWarned) { s.reachTargetWarned = true; saveState(); render(); }
-  else { saveState(); updateCountingDisplay(); }
-}
-function onHiccupTap() {
-  const s = state.currentSession;
-  if (!s) return;
-  if (navigator.vibrate) navigator.vibrate(20);
-  s.events.push({ time: Date.now(), isHiccup: true });
-  s.hiccupCount++; s.lastAnyMovementTime = Date.now();
-  saveState(); updateCountingDisplay();
-}
-function onUndoTap() {
-  const s = state.currentSession;
-  if (!s || s.events.length === 0) return;
-  showConfirmModal('撤销最后一次记录？', '撤销后该次点击将被删除。', '撤销', () => {
-    s.events.pop();
-    const { effective, lastEffectiveTime } = recomputeEffectiveCount(s.events);
-    s.effectiveCount = effective; s.lastEffectiveTime = lastEffectiveTime;
-    s.rawCount = s.events.filter(e => !e.isHiccup).length;
-    s.hiccupCount = s.events.filter(e => e.isHiccup).length;
-    s.lastAnyMovementTime = s.events.length > 0 ? s.events[s.events.length-1].time : null;
-    saveState(); render();
-  });
-}
-function updateCountingDisplay() {
-  const s = state.currentSession;
-  if (!s) return;
-  const e = document.getElementById('effCount'); const r = document.getElementById('rawCount'); const h = document.getElementById('hiccupCount');
-  if (e) e.textContent = s.effectiveCount;
-  if (r) r.textContent = s.rawCount;
-  if (h) h.textContent = s.hiccupCount;
-}
-function confirmFinish() {
-  const s = state.currentSession;
-  if (!s) return;
-  if (s.effectiveCount < 3) {
-    showConfirmModal('结束计数？', `当前有效胎动 ${s.effectiveCount} 次，少于 3 次标准。确定结束吗？`, '确定结束', () => finishSession());
-  } else {
-    finishSession();
+
+  if(act === 'confirm-del-weight'){
+    state.weights = state.weights.filter(w => w.id !== el.dataset.id);
+    save(); closeModal(); render();
+    return;
   }
-}
-function finishSession() {
-  const s = state.currentSession;
-  if (!s) return;
-  const now = Date.now();
-  s.endTime = now; s.status = 'completed'; s.durationMin = Math.round((now - s.startTime) / 60000);
-  let level = 'none', message = '';
-  if (s.effectiveCount < 3) { level = 'yellow'; message = `本时段1小时内有效胎动仅 ${s.effectiveCount} 次，少于3次，请结合整体情况咨询医生。`; }
-  else { message = `本时段有效胎动 ${s.effectiveCount} 次。请完成早中晚三次后查看12小时估算值。`; }
-  s.warningLevel = level; s.warningMessage = message;
-  state.history.push({ ...s });
-  state.currentSession = null; state.activeView = 'counting';
-  saveState(); render();
-  showResultModal(level, message);
-}
-function abortSession() {
-  showConfirmModal('放弃本次计数？', '放弃后本次记录将不会保存。', '确定放弃', () => {
-    state.currentSession = null;
-    saveState();
-    navigate('counting');
-  }, true);
-}
-function showResultModal(level, message) {
-  const c = { red: { color: 'var(--red)', icon: '⚠️', title: '胎动异常' }, yellow: { color: '#E65100', icon: '⚠️', title: '需要关注' }, none: { color: 'var(--green)', icon: '✅', title: '计数完成' } }[level] || { color: 'var(--green)', icon: '✅', title: '计数完成' };
-  let actions = '';
-  if (level === 'red') actions = `<button class="btn btn-danger" onclick="alert('请立即拨打您的产检医生电话，或直接前往医院。\\n紧急情况请拨打 120。')">拨打医生</button><button class="btn btn-primary" onclick="closeModal()">我知道了</button>`;
-  else actions = `<button class="btn btn-primary" onclick="closeModal()">完成</button>`;
-  document.body.insertAdjacentHTML('beforeend',
-    `<div class="modal-overlay" id="resultModal"><div class="modal">
-      <h2 style="color:${c.color};">${c.icon} ${c.title}</h2>
-      <p>${message}</p>
-      <div class="modal-actions">${actions}</div>
-    </div></div>`);
+
+  if(act === 'confirm-del-mod'){
+    const mid = el.dataset.id;
+    const m = state.modules.find(x => x.id === mid);
+    if(m && !m.deletedDate){
+      m.deletedDate = view.date;
+      Object.keys(state.celebratedMods).forEach(k => {
+        const idx = k.lastIndexOf('|');
+        if(idx > -1 && k.slice(idx + 1) === mid) delete state.celebratedMods[k];
+      });
+    }
+    save(); closeModal(); render();
+    return;
+  }
+});
+modalRoot.addEventListener('keydown', e => {
+  if(e.key === 'Enter' && e.target.id === 'editWInput'){
+    e.preventDefault();
+    const btn = modalRoot.querySelector('[data-act="confirm-edit-weight"]');
+    if(btn) btn.click();
+  }
+  if(e.key === 'Escape') closeModal();
+});
+
+/* ============================================================
+   7. 渲染
+   ============================================================ */
+const app = document.getElementById('app');
+
+function render(reset){
+  const sy = window.scrollY;
+  app.innerHTML = view.name === 'calendar' ? calendarHTML() : dayHTML();
+  if(view.name === 'day') setupTabs();
+  window.scrollTo(0, reset ? 0 : sy);
 }
 
-// ==================== 计时器 ====================
-let timerInterval = null;
-function startTimer() { stopTimer(); timerInterval = setInterval(tick, 1000); tick(); }
-function stopTimer() { if (timerInterval) { clearInterval(timerInterval); timerInterval = null; } }
-function tick() {
-  const s = state.currentSession;
-  if (!s) return;
-  const remaining = s.plannedEndTime - Date.now();
-  const el = document.getElementById('timer');
-  if (el) { el.textContent = formatTime(remaining); el.style.color = (remaining <= 5*60*1000 && remaining > 0) ? 'var(--red)' : 'var(--pink-dark)'; }
-  if (remaining <= 0) { stopTimer(); finishSession(); return; }
-  if (s.lastAnyMovementTime && !s.silenceWarned) {
-    const silence = Date.now() - s.lastAnyMovementTime;
-    if (silence > 90*60*1000) {
-      s.silenceWarned = true; s.warningLevel = 'red';
-      s.warningMessage = '超过90分钟无胎动，请左侧卧、喝水、轻推腹部；若仍无胎动，立即就医。';
-      saveState(); render(); showResultModal('red', s.warningMessage);
+/* ---------- 7.1 日历首页 ---------- */
+function calendarHTML(){
+  return `
+  <div class="page">
+    <header class="appbar">
+      <div class="brand">日迹</div>
+      <button class="icon-btn" data-act="open-weight" aria-label="体重趋势">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 17l5-6 4 4 5-7 4 5"/>
+        </svg>
+      </button>
+    </header>
+
+    <div class="cal-card">
+      ${calHeadHTML()}
+      ${view.calMode === 'year' ? yearGridHTML() : monthGridHTML()}
+      <div class="legend">
+        <span><i class="lg fest"></i>节日</span>
+        <span><i class="lg term"></i>节气</span>
+        <span><i class="lg mood"></i>心情</span>
+        <span><i class="lg bar"></i>完成度</span>
+        <span><i class="lg wdot"></i>体重</span>
+      </div>
+    </div>
+
+    <div class="tip">${view.calMode === 'year'
+      ? '点击月份标题切换到月视图，点击日期查看当天详情'
+      : '点击任意日期，记录当天的心情、体重与日常'}</div>
+  </div>`;
+}
+
+function calHeadHTML(){
+  const title = view.calMode === 'year'
+    ? `${view.year}年`
+    : `${view.year}年${view.month+1}月`;
+  return `
+  <div class="cal-head">
+    <div class="cal-left">
+      <span class="cal-title">${title}</span>
+      <div class="view-seg">
+        <button class="${view.calMode==='month'?'on':''}" data-calview="month">月</button>
+        <button class="${view.calMode==='year'?'on':''}" data-calview="year">年</button>
+      </div>
+    </div>
+    <div class="cal-nav">
+      <button class="nav-btn" data-nav="-1">‹</button>
+      <button class="nav-btn" data-act="today">今</button>
+      <button class="nav-btn" data-nav="1">›</button>
+    </div>
+  </div>`;
+}
+
+function monthGridHTML(){
+  const y = view.year, m = view.month;
+  const firstDow = (new Date(y, m, 1).getDay() + 6) % 7;
+  const dim = new Date(y, m+1, 0).getDate();
+  const prevDim = new Date(y, m, 0).getDate();
+  const tk = TODAY();
+
+  let cells = '';
+  for(let i = firstDow - 1; i >= 0; i--)
+    cells += `<div class="cell out"><span class="dnum">${prevDim - i}</span></div>`;
+
+  for(let d = 1; d <= dim; d++){
+    const key = `${y}-${pad(m+1)}-${pad(d)}`;
+    const mk = aggregateMood(key);
+    const hasW = state.weights.some(w => w.date === key);
+    const prog = dayProgress(key);
+    const info = getLunarInfo(y, m+1, d);
+
+    const cls = ['cell'];
+    if(key === tk) cls.push('today');
+    if(key > tk) cls.push('future');
+    if(mk || hasW || prog > 0 || (state.notes||[]).some(n=>n.date===key)) cls.push('has');
+
+    const lunarCls = info.isFestival ? 'lunar-line is-festival'
+                   : info.isTerm   ? 'lunar-line is-term'
+                   : 'lunar-line';
+
+    cells += `<button class="${cls.join(' ')}" data-date="${key}">
+      <span class="dnum">${d}</span>
+      <span class="${lunarCls}">${esc(info.lunarText)}</span>
+      <span class="cicon">${mk ? `<span style="color:${moodColor(mk)}">${moodSVG(mk,13)}</span>` : ''}</span>
+      ${prog > 0 ? `<span class="cbar"><i style="width:${(prog*100).toFixed(0)}%"></i></span>` : ''}
+      ${hasW ? `<span class="wdot"></span>` : ''}
+    </button>`;
+  }
+  const rest = (7 - (firstDow + dim) % 7) % 7;
+  for(let i = 1; i <= rest; i++)
+    cells += `<div class="cell out"><span class="dnum">${i}</span></div>`;
+
+  return `<div class="weekdays">${['一','二','三','四','五','六','日'].map(x=>`<span>${x}</span>`).join('')}</div>
+          <div class="grid">${cells}</div>`;
+}
+
+function yearGridHTML(){
+  const y = view.year;
+  const tk = TODAY();
+  let monthsHtml = '';
+
+  for(let m = 0; m < 12; m++){
+    const firstDow = (new Date(y, m, 1).getDay() + 6) % 7;
+    const dim = new Date(y, m+1, 0).getDate();
+
+    let cells = '';
+    for(let i = 0; i < firstDow; i++) cells += `<span class="ym-cell out"></span>`;
+
+    for(let d = 1; d <= dim; d++){
+      const key = `${y}-${pad(m+1)}-${pad(d)}`;
+      const mk = aggregateMood(key);
+      const hasW = state.weights.some(w => w.date === key);
+      const prog = dayProgress(key);
+      const hasNote = (state.notes||[]).some(n=>n.date===key);
+      const isToday = key === tk;
+      const isFuture = key > tk;
+
+      const cls = ['ym-cell'];
+      if(isFuture) cls.push('future');
+      if(isToday) cls.push('today');
+      else if(prog >= 1) cls.push('done');
+      else if(prog > 0) cls.push('partial');
+
+      let dot = '';
+      if(mk) dot = `<span class="ydot" style="background:${moodColor(mk)}"></span>`;
+      else if(hasW) dot = `<span class="ydot" style="background:var(--down)"></span>`;
+      else if(hasNote) dot = `<span class="ydot" style="background:#C4BCAB"></span>`;
+
+      cells += `<button class="${cls.join(' ')}" data-date="${key}">
+        <span>${d}</span>${dot}
+      </button>`;
+    }
+
+    const total = firstDow + dim;
+    const rest = (7 - total % 7) % 7;
+    for(let i = 0; i < rest; i++) cells += `<span class="ym-cell out"></span>`;
+
+    monthsHtml += `<div class="year-month">
+      <button class="ym-title" data-ym="${m}">${m+1}月</button>
+      <div class="ym-grid">${cells}</div>
+    </div>`;
+  }
+
+  return `<div class="year-grid">${monthsHtml}</div>`;
+}
+
+/* ---------- 7.2 单日详情 ---------- */
+function dayHTML(){
+  const key = view.date;
+  const d = new Date(key + 'T00:00:00');
+  const week = ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()];
+  const complete = isDayComplete(key);
+  const isToday = key === TODAY();
+
+  const tabs = state.pageOrder.map(p => {
+    const meta = PAGES[p];
+    const emoji = (p === 'check' && complete) ? '🎉' : meta.emoji;
+    return `<button class="dtab ${view.page === p ? 'on' : ''}" data-page="${p}">
+      <span class="dtab-emoji">${emoji}</span>
+      <span>${meta.name}</span>
+    </button>`;
+  }).join('');
+
+  return `
+  <div class="page">
+    <header class="appbar">
+      <button class="icon-btn" data-back aria-label="返回日历">‹</button>
+      <div class="day-switch">
+        <button class="day-nav" data-daynav="-1" aria-label="前一天">‹</button>
+        <div class="day-title">
+          <div class="dt-main">${d.getMonth()+1}月${d.getDate()}日</div>
+          <div class="dt-sub">${week}${isToday ? ' · 今天' : ''}</div>
+        </div>
+        <button class="day-nav" data-daynav="1" aria-label="后一天">›</button>
+      </div>
+      <button class="icon-btn today-btn" data-act="goto-today" aria-label="回到今天"
+              style="${isToday ? 'opacity:.4;pointer-events:none' : ''}">今</button>
+    </header>
+
+    <div class="dtab-bar" id="dtabBar">${tabs}</div>
+    <div class="drag-hint">左右拖动标签，可调整页面顺序</div>
+
+    <div id="dtabBody">${pageBodyHTML(view.page)}</div>
+  </div>`;
+}
+
+function pageBodyHTML(page){
+  if(page === 'weight') return weightPageHTML(view.date);
+  if(page === 'check')  return checkPageHTML(view.date);
+  return moodPageHTML(view.date);
+}
+
+/* ---- 心情页 ---- */
+function moodPageHTML(key){
+  const items = buildTimeline(key);
+  const total = items.length;
+
+  const timeline = total ? items.map(it => {
+    if(it.type === 'mood'){
+      return `<div class="tl-row">
+        <span class="tl-time">${it.time}</span>
+        <div class="tl-body">
+          <span style="color:${moodColor(it.key)};display:flex">${moodSVG(it.key,20)}</span>
+          <span class="tl-name">${moodName(it.key)}</span>
+        </div>
+        <button class="x-btn" data-del-mood="${it.id}">✕</button>
+      </div>`;
+    }
+    return `<div class="tl-row">
+      <span class="tl-time">${it.time}</span>
+      <div class="tl-body is-note">
+        <div class="tl-text">${esc(it.text)}</div>
+      </div>
+      <button class="x-btn" data-del-note="${it.id}">✕</button>
+    </div>`;
+  }).join('')
+  : `<div class="empty-line">还没有记录，点一下上面的表情或写点什么吧</div>`;
+
+  return `
+  <section class="card">
+    <div class="card-head">
+      <h3>此刻心情</h3>
+      <span class="hint">可随时记录 · 不限次数</span>
+    </div>
+    <div class="mood-picker">
+      ${MOODS.map(mt => `<button class="mood-btn" data-mood="${mt.key}">
+          <span style="color:${mt.color}">${moodSVG(mt.key,32)}</span>
+          <span class="ml">${mt.name}</span>
+        </button>`).join('')}
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h3>随手记</h3>
+      <span class="hint">一句话记录当下</span>
+    </div>
+    <div class="note-form">
+      <textarea id="noteInput" rows="2" placeholder="此刻在想什么…"></textarea>
+      <button class="btn" data-act="save-note">记录</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h3>今日记录</h3>
+      <div class="head-right">
+        <span class="hint">${total} 条</span>
+        <button class="mini order-btn" data-act="toggle-order">
+          ${state.timelineOrder === 'asc' ? '↑ 最早在上' : '↓ 最新在上'}
+        </button>
+      </div>
+    </div>
+    <div class="tl-list">${timeline}</div>
+  </section>`;
+}
+
+/* ---- 体重页 ---- */
+function weightPageHTML(key){
+  const weights = state.weights.filter(x => x.date === key)
+                               .sort((a,b)=> a.time < b.time ? -1 : 1);
+  const u = unitLabel();
+  const st = weightStats();
+
+  const deltaBox = (label, v) => {
+    if(v == null) return `<div class="stat-box">
+        <div class="k">${label}</div><div class="v flat">--</div></div>`;
+    const flat = Math.abs(v) < 0.05;
+    const color = flat ? '' : (v > 0 ? `color:var(--up)` : `color:var(--down)`);
+    const txt = (v > 0 ? '+' : '') + v.toFixed(1);
+    return `<div class="stat-box">
+        <div class="k">${label}</div>
+        <div class="v" style="${color}">${txt}<i>${u}</i></div>
+      </div>`;
+  };
+
+  return `
+  <section class="card">
+    <div class="card-head">
+      <h3>体重趋势</h3>
+      <div class="seg">
+        <button class="${state.unit==='kg'?'on':''}" data-unit="kg">kg</button>
+        <button class="${state.unit==='jin'?'on':''}" data-unit="jin">斤</button>
+      </div>
+    </div>
+
+    <div class="stat-summary">
+      <div class="stat-box">
+        <div class="k">当前体重</div>
+        <div class="v">${st.cur != null ? st.cur.toFixed(1) : '--'}<i>${u}</i></div>
+      </div>
+      ${deltaBox('较上次', st.last)}
+      ${deltaBox('总体变化', st.total)}
+    </div>
+
+    <div class="stat-tabs">
+      ${[['week','周'],['month','月'],['year','年']].map(([k,n]) =>
+        `<button data-range="${k}" class="${view.statRange===k?'on':''}">${n}</button>`).join('')}
+    </div>
+    <div id="wChartWrap">${buildChart(getSeries(view.statRange))}</div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h3>记录体重</h3>
+    </div>
+    <div class="w-form">
+      <input class="w-input" id="wInput" type="number" step="0.1" inputmode="decimal"
+             placeholder="0.0" value="">
+      <span class="w-unit">${u}</span>
+      <button class="btn" data-act="save-weight">记录</button>
+    </div>
+    ${weights.length ? weights.map(w => `<div class="w-row">
+        <span class="w-t">${w.time}</span>
+        <span class="w-v">${toDisplay(w.kg).toFixed(1)}<i>${u}</i></span>
+        <button class="mini" data-edit-weight="${w.id}">改</button>
+        <button class="mini danger" data-del-weight="${w.id}">删</button>
+      </div>`).join('')
+      : `<div class="empty-line">当天还没有体重记录</div>`}
+  </section>`;
+}
+
+/* ---- 打卡页 ---- */
+function checkPageHTML(key){
+  const activeMods = getActiveModules(key);
+  const total = activeMods.length;
+  let doneCount = 0;
+
+  const modRows = activeMods.map(m => {
+    const c = state.checks[key + '|' + m.id] || 0;
+    const done = c >= m.target;
+    if(done) doneCount++;
+    const slots = Math.min(Math.max(m.target, c), 12);
+    let icons = '';
+    for(let i = 0; i < slots; i++){
+      icons += `<button class="slot ${i < c ? 'on' : ''}" data-mod="${m.id}" data-idx="${i}">${m.icon}</button>`;
+    }
+    return `<div class="mod">
+      <div class="mod-head">
+        <span class="mod-name">${m.icon} ${m.name}${done ? '<span class="done-badge">✓</span>' : ''}</span>
+        <span class="mod-count">${c} / ${m.target}</span>
+        <button class="mod-del" data-del-mod="${m.id}">✕</button>
+      </div>
+      <div class="mod-slots">${icons}</div>
+    </div>`;
+  }).join('');
+
+  const allDone = total > 0 && doneCount === total;
+
+  const addForm = `
+    <div class="add-form">
+      <div class="emoji-row">
+        ${EMOJIS.map(e => `<button class="emo ${view.newIcon===e?'on':''}" data-emo="${e}">${e}</button>`).join('')}
+      </div>
+      <input id="modName" placeholder="模块名称，如 喝水 / 阅读 / 早睡" autocomplete="off">
+      <div class="target-row">
+        <span>每日目标</span>
+        <input id="modTarget" type="number" min="1" max="12" value="1">
+        <span>次</span>
+      </div>
+      <div class="form-note">新模块从当前日期起生效，之后的日期会自动同步显示。</div>
+      <div class="form-actions">
+        <button class="btn ghost" data-act="cancel-mod">取消</button>
+        <button class="btn" data-act="confirm-mod">添加</button>
+      </div>
+    </div>`;
+
+  return `
+  <section class="card">
+    <div class="card-head">
+      <h3>日常打卡</h3>
+      <div class="head-right">
+        ${allDone ? `<span class="all-done">🎉 全部完成</span>`
+                  : (total ? `<span class="hint">${doneCount}/${total} 已完成</span>` : '')}
+        <button class="mini" data-act="add-mod">＋ 模块</button>
+      </div>
+    </div>
+    ${total ? modRows : `<div class="empty-line">当天没有打卡模块，点右上角添加</div>`}
+    ${view.showAddMod ? addForm : ''}
+  </section>`;
+}
+
+/* ---------- 7.3 趋势数据与图表 ---------- */
+function getSeries(range){
+  const today = new Date();
+  const out = [];
+  if(range === 'year'){
+    for(let i = 11; i >= 0; i--){
+      const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      const ym = `${d.getFullYear()}-${pad(d.getMonth()+1)}`;
+      const vals = state.weights.filter(w => w.date.slice(0,7) === ym).map(w => w.kg);
+      out.push({ label:`${d.getMonth()+1}月`, value: vals.length ? avg(vals) : null });
+    }
+  } else {
+    const n = range === 'week' ? 7 : 30;
+    for(let i = n - 1; i >= 0; i--){
+      const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+      const k = dkey(d);
+      const vals = state.weights.filter(w => w.date === k).map(w => w.kg);
+      out.push({ label:`${d.getMonth()+1}/${d.getDate()}`, value: vals.length ? avg(vals) : null });
     }
   }
+  return out;
 }
 
-// ==================== 启动 ====================
-loadState();
-if (location.hash) { const v = location.hash.slice(1); if (['home', 'counting', 'bpd', 'history', 'stats'].includes(v)) state.activeView = v; }
-render();
-</script>
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js')
-      .then(reg => console.log('SW 注册成功:', reg.scope))
-      .catch(err => console.error('SW 注册失败:', err));
+function buildChart(series){
+  const pts = series.filter(p => p.value != null)
+                    .map(p => ({ label: p.label, value: toDisplay(p.value) }));
+  if(!pts.length) return `<div class="chart-empty">暂无数据<br><span>记录一条体重后即可查看趋势</span></div>`;
+
+  const W = 340, H = 190, pl = 44, pr = 16, pt = 16, pb = 30;
+  const iw = W - pl - pr, ih = H - pt - pb;
+
+  let min = Math.min(...pts.map(p => p.value));
+  let max = Math.max(...pts.map(p => p.value));
+  if(max - min < 1){ const mid = (max + min) / 2; min = mid - 0.5; max = mid + 0.5; }
+  const padY = (max - min) * 0.18; min -= padY; max += padY;
+
+  const px = i => pts.length === 1 ? pl + iw/2 : pl + iw * i / (pts.length - 1);
+  const py = v => pt + ih * (1 - (v - min) / (max - min));
+
+  let s = `<svg viewBox="0 0 ${W} ${H}" class="chart">
+    <defs><linearGradient id="ga" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#C96B4A" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#C96B4A" stop-opacity="0"/>
+    </linearGradient></defs>`;
+
+  for(let i = 0; i <= 4; i++){
+    const yy = pt + ih * i / 4;
+    const v = max - (max - min) * i / 4;
+    s += `<line x1="${pl}" y1="${yy.toFixed(1)}" x2="${W-pr}" y2="${yy.toFixed(1)}"
+            stroke="#EFE9DC" stroke-width="1"/>`;
+    s += `<text x="${pl-8}" y="${(yy+3.5).toFixed(1)}" text-anchor="end"
+            font-size="10" fill="#B0A797">${v.toFixed(1)}</text>`;
+  }
+
+  const co = pts.map((p, i) => [px(i), py(p.value)]);
+
+  s += `<path d="M${co[0][0].toFixed(1)} ${pt+ih} ` +
+       co.map(c => `L${c[0].toFixed(1)} ${c[1].toFixed(1)}`).join(' ') +
+       ` L${co[co.length-1][0].toFixed(1)} ${pt+ih} Z" fill="url(#ga)"/>`;
+
+  s += `<path d="${co.map((c,i)=>(i?'L':'M')+c[0].toFixed(1)+' '+c[1].toFixed(1)).join(' ')}"
+          fill="none" stroke="#C96B4A" stroke-width="2.4"
+          stroke-linecap="round" stroke-linejoin="round"/>`;
+
+  co.forEach(c => {
+    s += `<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="3.6"
+            fill="#FFFDFA" stroke="#C96B4A" stroke-width="2.2"/>`;
+  });
+
+  const step = Math.ceil(pts.length / 5);
+  pts.forEach((p, i) => {
+    if(i % step === 0 || i === pts.length - 1){
+      s += `<text x="${px(i).toFixed(1)}" y="${H-10}" text-anchor="middle"
+              font-size="10" fill="#B0A797">${p.label}</text>`;
+    }
+  });
+
+  return s + `</svg>`;
+}
+
+/* ============================================================
+   8. 子页面切换 & 局部刷新
+   ============================================================ */
+function switchPage(page){
+  if(view.page === page) return;
+  view.page = page;
+  const bar = document.getElementById('dtabBar');
+  if(bar){
+    bar.querySelectorAll('.dtab').forEach(t => {
+      t.classList.toggle('on', t.dataset.page === page);
+    });
+  }
+  const body = document.getElementById('dtabBody');
+  if(body) body.innerHTML = pageBodyHTML(page);
+  window.scrollTo(0, 0);
+}
+
+function refreshWeightChart(){
+  const wrap = document.getElementById('wChartWrap');
+  if(wrap) wrap.innerHTML = buildChart(getSeries(view.statRange));
+  document.querySelectorAll('.stat-tabs [data-range]').forEach(b => {
+    b.classList.toggle('on', b.dataset.range === view.statRange);
   });
 }
+
+/* ============================================================
+   9. 标签拖拽排序
+   ============================================================ */
+let tabDrag = null;
+
+function setupTabs(){
+  const bar = document.getElementById('dtabBar');
+  if(!bar) return;
+  bar.querySelectorAll('.dtab').forEach(tab => {
+    tab.addEventListener('pointerdown', onTabDown);
+  });
+}
+
+function onTabDown(e){
+  if(e.pointerType === 'mouse' && e.button !== 0) return;
+  const tab = e.currentTarget;
+  const rect = tab.getBoundingClientRect();
+  tabDrag = {
+    el: tab, startX: e.clientX, startY: e.clientY,
+    offsetX: e.clientX - rect.left, w: rect.width,
+    moved: false, page: tab.dataset.page, pid: e.pointerId,
+  };
+  try { tab.setPointerCapture(e.pointerId); } catch(_) {}
+  tab.addEventListener('pointermove', onTabMove, { passive:false });
+  tab.addEventListener('pointerup', onTabUp);
+  tab.addEventListener('pointercancel', onTabUp);
+}
+
+function onTabMove(e){
+  if(!tabDrag) return;
+  const dx = e.clientX - tabDrag.startX;
+  const dy = e.clientY - tabDrag.startY;
+
+  if(!tabDrag.moved){
+    if(Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+    if(Math.abs(dy) > Math.abs(dx)){ cancelTabDrag(); return; }
+    tabDrag.moved = true;
+    tabDrag.el.classList.add('dragging');
+  }
+  if(e.cancelable) e.preventDefault();
+
+  const el = tabDrag.el;
+  const bar = el.parentElement;
+  const visualLeft = e.clientX - tabDrag.offsetX;
+
+  reorderTabs(el, visualLeft + tabDrag.w / 2);
+
+  const layoutLeft = bar.getBoundingClientRect().left + el.offsetLeft;
+  el.style.transform = `translateX(${(visualLeft - layoutLeft).toFixed(1)}px)`;
+}
+
+function reorderTabs(el, center){
+  const bar = el.parentElement;
+  let sib = el.nextElementSibling;
+  while(sib){
+    const r = sib.getBoundingClientRect();
+    if(center > r.left + r.width / 2){
+      const next = sib.nextElementSibling;
+      bar.insertBefore(sib, el);
+      sib = next;
+    } else break;
+  }
+  sib = el.previousElementSibling;
+  while(sib){
+    const r = sib.getBoundingClientRect();
+    if(center < r.left + r.width / 2){
+      const prev = sib.previousElementSibling;
+      bar.insertBefore(el, sib);
+      sib = prev;
+    } else break;
+  }
+}
+
+function cancelTabDrag(){
+  if(!tabDrag) return;
+  const el = tabDrag.el;
+  el.removeEventListener('pointermove', onTabMove);
+  el.removeEventListener('pointerup', onTabUp);
+  el.removeEventListener('pointercancel', onTabUp);
+  el.classList.remove('dragging');
+  el.style.transform = '';
+  try { el.releasePointerCapture(tabDrag.pid); } catch(_) {}
+  tabDrag = null;
+}
+
+function onTabUp(){
+  if(!tabDrag) return;
+  const { el, moved, page } = tabDrag;
+
+  el.removeEventListener('pointermove', onTabMove);
+  el.removeEventListener('pointerup', onTabUp);
+  el.removeEventListener('pointercancel', onTabUp);
+  try { el.releasePointerCapture(tabDrag.pid); } catch(_) {}
+  el.classList.remove('dragging');
+  el.style.transform = '';
+  tabDrag = null;
+
+  if(moved){
+    const bar = document.getElementById('dtabBar');
+    if(bar){
+      state.pageOrder = [...bar.querySelectorAll('.dtab')].map(t => t.dataset.page);
+      save();
+    }
+  } else {
+    switchPage(page);
+  }
+}
+
+/* ============================================================
+   10. 行为
+   ============================================================ */
+function openDay(key){
+  view.name = 'day';
+  view.date = key;
+  view.wDate = key;
+  view.showAddMod = false;
+  render(true);
+}
+function shiftDay(n){
+  const d = new Date(view.date + 'T00:00:00');
+  d.setDate(d.getDate() + n);
+  view.date = dkey(d);
+  view.wDate = view.date;
+  view.showAddMod = false;
+  render(true);
+}
+function shiftMonth(n){
+  if(view.calMode === 'year'){
+    view.year += n;
+    render();
+  } else {
+    const d = new Date(view.year, view.month + n, 1);
+    view.year = d.getFullYear();
+    view.month = d.getMonth();
+    render();
+  }
+}
+function addMood(key){
+  state.moods.push({ id: uid(), date: view.date, time: nowTime(), key });
+  save(); render();
+}
+function saveNote(){
+  const el = document.getElementById('noteInput');
+  if(!el) return;
+  const text = (el.value || '').trim();
+  if(!text){ el.focus(); return; }
+  state.notes.push({ id: uid(), date: view.date, time: nowTime(), text });
+  save(); render();
+}
+function saveWeight(){
+  const input = document.getElementById('wInput');
+  if(!input) return;
+  const raw = parseFloat(input.value);
+  if(!isFinite(raw) || raw <= 0){ input.focus(); return; }
+
+  const kg = Math.round(fromDisplay(raw) * 10) / 10;
+  state.weights.push({ id: uid(), date: view.date, time: nowTime(), kg });
+  save(); render();
+}
+
+function handleSlotClick(mid, idx){
+  const mod = state.modules.find(m => m.id === mid);
+  if(!mod) return;
+
+  const k = view.date + '|' + mid;
+  const cur = state.checks[k] || 0;
+  const next = idx < cur ? idx : idx + 1;
+  state.checks[k] = next;
+
+  const oldDone = cur  >= mod.target;
+  const newDone = next >= mod.target;
+
+  let praiseKind = null;
+
+  if(!oldDone && newDone){
+    const full = isDayComplete(view.date);
+    if(full && !state.celebrated[view.date]){
+      state.celebrated[view.date] = true;
+      state.celebratedMods[k] = true;
+      praiseKind = 'all';
+    } else if(!state.celebratedMods[k]){
+      state.celebratedMods[k] = true;
+      praiseKind = 'mod';
+    }
+  } else if(oldDone && !newDone){
+    delete state.celebratedMods[k];
+    if(state.celebrated[view.date]) delete state.celebrated[view.date];
+  }
+
+  save();
+  render();
+  if(praiseKind) openPraiseModal(praiseKind);
+}
+
+/* 全局点击委托 */
+app.addEventListener('click', e => {
+  const t = e.target;
+
+  const cell = t.closest('[data-date]');
+  if(cell){ openDay(cell.dataset.date); return; }
+
+  const dayNav = t.closest('[data-daynav]');
+  if(dayNav){ shiftDay(+dayNav.dataset.daynav); return; }
+
+  const nav = t.closest('[data-nav]');
+  if(nav){ shiftMonth(+nav.dataset.nav); return; }
+
+  const actEl = t.closest('[data-act]');
+  if(actEl){
+    const act = actEl.dataset.act;
+
+    if(act === 'today'){
+      const n = new Date();
+      view.year = n.getFullYear();
+      if(view.calMode === 'month') view.month = n.getMonth();
+      render();
+
+    } else if(act === 'goto-today'){
+      view.date = TODAY();
+      view.wDate = TODAY();
+      view.showAddMod = false;
+      render(true);
+
+    } else if(act === 'open-weight'){
+      view.name = 'day';
+      view.date = TODAY();
+      view.wDate = TODAY();
+      view.page = 'weight';
+      view.showAddMod = false;
+      render(true);
+
+    } else if(act === 'save-weight'){
+      saveWeight();
+
+    } else if(act === 'save-note'){
+      saveNote();
+
+    } else if(act === 'toggle-order'){
+      state.timelineOrder = state.timelineOrder === 'asc' ? 'desc' : 'asc';
+      save(); render();
+
+    } else if(act === 'add-mod'){
+      view.showAddMod = true; render();
+
+    } else if(act === 'cancel-mod'){
+      view.showAddMod = false; render();
+
+    } else if(act === 'confirm-mod'){
+      const nameEl = document.getElementById('modName');
+      const tgtEl  = document.getElementById('modTarget');
+      const name = (nameEl.value || '').trim();
+      const target = Math.max(1, Math.min(12, parseInt(tgtEl.value, 10) || 1));
+      if(!name){ nameEl.focus(); return; }
+      state.modules.push({
+        id: uid(),
+        name,
+        icon: view.newIcon || '💧',
+        target,
+        createdDate: view.date,
+        deletedDate: null,
+      });
+      view.showAddMod = false;
+      view.newIcon = '💧';
+      save(); render();
+    }
+    return;
+  }
+
+  const cvBtn = t.closest('[data-calview]');
+  if(cvBtn){
+    const mode = cvBtn.dataset.calview;
+    if(view.calMode !== mode){
+      view.calMode = mode;
+      render();
+    }
+    return;
+  }
+
+  const ymBtn = t.closest('[data-ym]');
+  if(ymBtn){
+    view.month = +ymBtn.dataset.ym;
+    view.calMode = 'month';
+    render(true);
+    return;
+  }
+
+  if(t.closest('[data-back]')){
+    view.name = 'calendar';
+    render(true);
+    return;
+  }
+
+  const moodBtn = t.closest('[data-mood]');
+  if(moodBtn){ addMood(moodBtn.dataset.mood); return; }
+
+  const delMood = t.closest('[data-del-mood]');
+  if(delMood){
+    state.moods = state.moods.filter(x => x.id !== delMood.dataset.delMood);
+    save(); render(); return;
+  }
+
+  const delNote = t.closest('[data-del-note]');
+  if(delNote){
+    state.notes = state.notes.filter(n => n.id !== delNote.dataset.delNote);
+    save(); render(); return;
+  }
+
+  const editW = t.closest('[data-edit-weight]');
+  if(editW){ openWeightEditModal(editW.dataset.editWeight); return; }
+
+  const delW = t.closest('[data-del-weight]');
+  if(delW){ openWeightDeleteModal(delW.dataset.delWeight); return; }
+
+  const unitBtn = t.closest('[data-unit]');
+  if(unitBtn){
+    state.unit = unitBtn.dataset.unit;
+    save(); render(); return;
+  }
+
+  const rangeBtn = t.closest('[data-range]');
+  if(rangeBtn){
+    view.statRange = rangeBtn.dataset.range;
+    refreshWeightChart();
+    return;
+  }
+
+  const slot = t.closest('.slot[data-mod]');
+  if(slot){
+    handleSlotClick(slot.dataset.mod, +slot.dataset.idx);
+    return;
+  }
+
+  const delMod = t.closest('[data-del-mod]');
+  if(delMod){
+    openDeleteModuleModal(delMod.dataset.delMod);
+    return;
+  }
+
+  const emo = t.closest('[data-emo]');
+  if(emo){
+    view.newIcon = emo.dataset.emo;
+    document.querySelectorAll('.emo').forEach(b =>
+      b.classList.toggle('on', b.dataset.emo === view.newIcon));
+    return;
+  }
+});
+
+app.addEventListener('keydown', e => {
+  if(e.key === 'Enter' && e.target.id === 'wInput'){
+    e.preventDefault(); saveWeight();
+  }
+  if(e.key === 'Enter' && e.target.id === 'noteInput' && !e.shiftKey){
+    e.preventDefault(); saveNote();
+  }
+});
+
+/* 启动 */
+render(true);
 </script>
 </body>
 </html>
